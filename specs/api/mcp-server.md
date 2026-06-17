@@ -1,8 +1,8 @@
 # API: Otter hosted MCP server (upstream contract)
 
-The surface we consume. Owned by Otter; captured here as what we depend on. Values marked
-**(confirmed)** were probed live or observed in real tool calls; **(TBD: spike)** awaits the
-plan-01 auth spike that captures real `tools/list` schemas and sample tool outputs.
+The surface we consume. Owned by Otter; captured here as what we depend on. Everything below
+is **(confirmed)** — probed live and validated end-to-end by the plan-01 auth spike (full OAuth
+dance + `tools/list` + live `search`/`fetch`/`get_user_info` calls). No open `(TBD)` items remain.
 
 ## Endpoint & transport
 
@@ -34,42 +34,108 @@ plan-01 auth spike that captures real `tools/list` schemas and sample tool outpu
   - `grant_types_supported`: `["authorization_code", "refresh_token"]`
 - **Read-only.** The only granted scopes are `profile:read` + `conversations:read`. No write
   capability exists upstream — consistent with [find-and-pull](../principles.md#find-and-pull-nothing-more).
+- **Spike-validated flow** (plan 01): DCR returns a **public client** (`client_id`, no secret,
+  `token_endpoint_auth_method: "none"`). The authorize request and token exchange both carry
+  `resource=https://mcp.otter.ai/`. The token response is
+  `{ access_token, token_type, expires_in, refresh_token, scope }` — **a `refresh_token` is
+  issued**, enabling headless refresh.
+- **Authorization codes are short-lived.** A long delay between building the authorize URL and
+  approving it yields `invalid_grant` at the token step. `auth login` must mint the URL and
+  complete the exchange in one prompt window; don't pre-generate URLs to use later.
 
 ## Tools
 
-Three tools. Input schemas below are **(confirmed)** from observed real calls; the spike
-verifies them against the authoritative `tools/list` and captures the *output* schemas.
+Three tools. Input schemas and output shapes below are **(confirmed)** — verified against the
+authoritative `tools/list` and live tool calls in the plan-01 spike. All examples are
+**synthetic**; real payloads were never committed.
+
+Every tool result comes back through MCP's standard envelope: `{ content: [{ type: "text",
+text: "<payload>" }], structuredContent, isError }`. The CLI reads `content[0].text` (a string;
+JSON for `search`/`fetch`, prose for `get_user_info`) and parses/reshapes it.
 
 ### `get_user_info`
 
 - **Input:** `{}` (confirmed)
-- **Output:** the authenticated user's profile (name, email). Exact shape **(TBD: spike)**.
+- **Output:** prose text, not JSON:
+
+  ```
+  User Information:
+  Name: Jane Doe
+  Email: jane@example.com
+  Current DateTime: 2026-06-17 14:37:30 PDT
+  ```
+
+  The tool is also the upstream's **clock** — `Current DateTime` (TZ-aware) is what the server
+  expects an agent to anchor relative date ranges against before calling `search`.
 - **Used by:** `auth status`, `doctor`, cached into config for `home`.
 
 ### `search`
 
-Find/browse conversations. Input parameters (confirmed from real usage):
+Find/browse conversations — returns **metadata only**, never transcript text. Full input
+schema (confirmed; all params except `query` are optional, nullable, default `""`/`null`):
 
 | Param | Type | Notes |
 |---|---|---|
-| `query` | string | Keyword/semantic query. **May be empty** (`""`) for date-only browse. |
-| `created_after` | string | `YYYY/MM/DD`. Lower bound on creation date. |
-| `created_before` | string | `YYYY/MM/DD`. Upper bound on creation date. |
-| `title_contains` | string | Substring match on conversation title. |
-| `attended_by` | string | Filter by an attendee (e.g. a person's name). |
+| `query` | string | Keyword/semantic query. **Required field but may be `""`** — empty + a date range is date-only browse. |
+| `created_after` | string\|null | `YYYY/MM/DD`. Lower bound on creation date. |
+| `created_before` | string\|null | `YYYY/MM/DD`. Upper bound on creation date. |
+| `title_contains` | string\|null | Space-separated keywords matched against the title. |
+| `keywords_in_transcript` | string\|null | Comma-separated keywords searched **within transcripts**. |
+| `attended_by` | string\|null | Comma-separated attendee **names** (not emails). |
+| `channel_name` | string\|null | Comma-separated channel name(s) to search within. |
+| `folder_name` | string\|null | Comma-separated folder name(s) to search within. |
+| `include_shared_meetings` | boolean\|null | Default `true`; set `false` for "my meetings only". |
+| `username` | string\|null | The caller's name (from `get_user_info`); when set, results carry a `participation_status`. |
 
-- **Output:** a list of conversation summaries, each including at least an `id` (the
-  `otter.ai/u/<id>` slug, consumed by `fetch`) and a title. Full field set, result count
-  semantics, and whether pagination exists **(TBD: spike)**.
+- **Output** (inside `content[0].text`, after unwrapping): `{ "results": [ Meeting ] }` — **no
+  count/total/pagination wrapper**; the server returns the full matched set. Each `Meeting`:
+
+  | Field | Type | Notes |
+  |---|---|---|
+  | `id` | string | Conversation slug — feeds `fetch`. |
+  | `title` | string | Often literally `"Note"` when un-renamed. |
+  | `url` | string | `https://otter.ai/u/<id>`. |
+  | `start_time` | string | Meeting start timestamp. |
+  | `duration` | number | Length (seconds). |
+  | `short_summary` | string | One-line generated summary. |
+  | `action_items` | array | Generated action items (may be empty). |
+
+  Synthetic example:
+
+  ```json
+  { "results": [ {
+    "id": "aBcDeFgHiJkLmNoPqRsTuVwXyZ0",
+    "title": "Weekly roadmap review",
+    "url": "https://otter.ai/u/aBcDeFgHiJkLmNoPqRsTuVwXyZ0",
+    "start_time": "2026-05-04 10:00:00",
+    "duration": 1850,
+    "short_summary": "Reviewed milestones and reprioritized the backlog.",
+    "action_items": ["Send recap to the team"]
+  } ] }
+  ```
 
 ### `fetch`
 
 Pull a full transcript.
 
-- **Input:** `{ "id": string }` — the conversation slug (confirmed). The hosted docs also
-  describe pulling by full `otter.ai/u/<id>` URL; the CLI normalizes a URL to its id.
-- **Output:** the full transcript text plus conversation metadata. Exact shape, transcript
-  format, and whether summary/speaker labels are included **(TBD: spike)**.
+- **Input:** `{ "id": string }` — **id only; the tool explicitly rejects URLs**. The CLI
+  normalizes an `otter.ai/u/<id>` URL down to `<id>` before calling (confirmed required).
+- **Output** (inside `content[0].text`, after unwrapping): `{ id, title, url, text, metadata }`:
+  - `text` — the full transcript as a single string, formatted `[H:MM:SS] Speaker N: …` per line.
+  - `metadata` — `{ action_items, duration, short_summary, start_time }` (same fields `search`
+    returns per meeting).
+
+  Synthetic example:
+
+  ```json
+  {
+    "id": "aBcDeFgHiJkLmNoPqRsTuVwXyZ0",
+    "title": "Weekly roadmap review",
+    "url": "https://otter.ai/u/aBcDeFgHiJkLmNoPqRsTuVwXyZ0",
+    "text": "[0:00:00] Speaker 1: Thanks everyone for joining…\n[0:00:12] Speaker 2: Happy to be here…",
+    "metadata": { "action_items": [], "duration": 1850, "short_summary": "…", "start_time": "2026-05-04 10:00:00" }
+  }
+  ```
 
 ## Errors
 

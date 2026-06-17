@@ -27,7 +27,13 @@ parallel with 01's spec write-up.
 1. `src/otter/oauth.ts` — an `@modelcontextprotocol/sdk` OAuth client provider implementing:
    metadata discovery, RFC 7591 dynamic registration (public client), PKCE/S256 authorize via
    loopback listener, code→token exchange, refresh grant, and storage hooks backed by
-   `config.ts`. Two-phase `--no-wait`/`--wait` login like gws-axi.
+   `config.ts`. Two-phase `--no-wait`/`--wait` login like gws-axi. **Spike-proven** (plan 01):
+   this exact provider shape completed the dance. Persist the full token set
+   `{access_token, refresh_token, token_type, scope, expires_at(=now+expires_in)}`. Codes are
+   short-lived — **mint the authorize URL and complete the exchange in one prompt window**
+   (a stale code fails `invalid_grant`); `--no-wait` must therefore warn that the URL expires
+   quickly. The reference loopback page should send UTF-8 (`charset=utf-8`) to avoid the
+   garbled em-dash seen in the spike.
 2. `src/otter/client.ts` — wrap `StreamableHTTPClientTransport`; expose the internal client
    interface `getUser()` / `search()` / `fetch()`; 60s pre-expiry refresh; transparent
    refresh-once-on-401 retry; map JSON-RPC/HTTP errors to `AxiError` with actionable `help[]`.

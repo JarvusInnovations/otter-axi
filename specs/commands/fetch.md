@@ -23,17 +23,20 @@ exit 2; no prompt.
 ## Data requirements
 
 Calls MCP `fetch` with `{ id }`. Requires valid auth ([behaviors/auth.md](../behaviors/auth.md));
-refreshes/retries transparently. Exact output shape (transcript format, included metadata,
-speaker labels, summary) is **(TBD: spike)** — plan 01 captures it before this command is built.
+refreshes/retries transparently. Output (spike-confirmed): `{ id, title, url, text, metadata }`
+where `text` is the full transcript as one string formatted `[H:MM:SS] Speaker N: …` per line,
+and `metadata` is `{ action_items, duration, short_summary, start_time }`.
 
 ## Display rules
 
 - Transcripts are large. **Default: preview-to-stdout, full-to-file** (the metabase-axi
-  pattern). Stdout shows conversation metadata (id, title, created, attendees as available)
-  plus a capped preview of the transcript body with a `…(truncated, N chars total)` marker.
-- `--out <path>` writes the complete transcript to the file and returns a confirmation object
-  (path, byte/char count) — the full body is never dumped inline in this mode.
-- `--full` overrides truncation and prints the whole transcript to stdout (for piping).
+  pattern). Stdout shows the metadata header (`id`, `title`, `url`, `start` from `start_time`,
+  `dur`, `short_summary`) plus a capped preview of `text` with a `…(truncated, N chars total)`
+  marker. `action_items` shown as a count, not expanded.
+- `--out <path>` writes the complete `text` transcript to the file and returns a confirmation
+  object (path, char count) — the full body is never dumped inline in this mode.
+- `--full` overrides truncation and prints the whole transcript to stdout (for piping). The
+  `[H:MM:SS] Speaker N:` line format is preserved verbatim — we do not re-segment or relabel.
 - **Not found / invalid id:** definitive `AxiError` naming the id, with a `help[]` pointing
   back to `search`.
 

@@ -36,8 +36,11 @@ schemas, so display columns and preview rules are real, not guessed).
 
 ## Validation
 
-- [ ] `otter-axi search -q "roadmap review" --after 30d` returns a populated TOON table.
+- [ ] `otter-axi search -q "roadmap review" --after 30d` returns a populated TOON table
+      (columns `id,title,start,dur,summary,ai:N`; header count `N`, never `N of M`).
 - [ ] `otter-axi search --after 2026/05/01 --before 2026/05/07` (empty query, browse) works.
+- [ ] The extra filters map through: `--in-transcript`, `--channel`, `--folder`, `--mine`;
+      `username` is auto-filled from the cached profile (not a flag).
 - [ ] Zero-result search prints a definitive empty state echoing the effective filters.
 - [ ] `otter-axi fetch <id>` previews; `--out` writes full transcript + confirmation; `--full`
       prints the whole body.

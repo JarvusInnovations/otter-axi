@@ -16,15 +16,21 @@ an empty query plus a date range is browse mode (see
 
 | Flag | Maps to | Notes |
 |---|---|---|
-| `-q, --query <str>` | `query` | Alternative to positional; positional wins if both given. |
+| `-q, --query <str>` | `query` | Alternative to positional; positional wins if both given. Sent as `""` when omitted. |
 | `--after <date>` | `created_after` | Accepts ISO (`2026-05-27`) or relative (`7d`, `30d`); normalized to `YYYY/MM/DD`. |
 | `--before <date>` | `created_before` | Same parsing as `--after`. |
-| `--title-contains <str>` | `title_contains` | |
-| `--attended-by <name>` | `attended_by` | |
-| `--limit <n>` | client-side | Cap rows shown; default per output kit (e.g. 20). |
-| `--full` | client-side | Show all rows / untruncated titles. |
+| `--title-contains <str>` | `title_contains` | Space-separated keywords matched against the title. |
+| `--in-transcript <str>` | `keywords_in_transcript` | Comma-separated keywords searched within transcript bodies. |
+| `--attended-by <name>` | `attended_by` | Comma-separated attendee names (not emails). |
+| `--channel <name>` | `channel_name` | Comma-separated channel name(s) to search within. |
+| `--folder <name>` | `folder_name` | Comma-separated folder name(s) to search within. |
+| `--mine` | `include_shared_meetings=false` | Restrict to meetings the user personally owns/attended (default includes shared). |
+| `--limit <n>` | client-side | Cap rows shown; default 20. |
+| `--full` | client-side | Show all rows / untruncated titles + summaries. |
 
-Date parsing is shared with any future range flags; relative forms are anchored to today.
+Date parsing is shared across range flags; relative forms are anchored to today. The upstream
+`username` param (used to compute `participation_status`) is filled automatically from the
+cached profile — it is not a user-facing flag.
 
 ## Data requirements
 
@@ -33,13 +39,17 @@ Calls MCP `search` with the mapped params (omitting absent ones). Requires valid
 
 ## Display rules
 
-- TOON table of results. Default columns: `id`, `title`, `created` (date), and attendee/
-  count fields **as confirmed by the spike**. Long titles truncated with the standard marker.
-- Header carries a count label (`N of M` when the result count is known; the spike confirms
-  whether the upstream returns a total / supports pagination).
-- **Definitive empty state:** when zero results, say so explicitly and echo the effective
-  filters (query + normalized date window + any title/attendee filters) so the agent can see
-  what was searched.
+- TOON table over the `results` array. Default columns: `id`, `title`, `start` (date from
+  `start_time`), `dur` (duration, humanized e.g. `31m`), `summary` (`short_summary`,
+  truncated). `action_items` rendered as a count (`ai:N`), not expanded — surfacing, not
+  analyzing ([find-and-pull](../principles.md#find-and-pull-nothing-more)). Long titles/summaries
+  truncated with the standard marker unless `--full`.
+- **No upstream total exists** — `search` returns the full matched set with no count/pagination
+  wrapper. The header count is therefore `N` (or `N shown` when `--limit` caps the rows),
+  never `N of M`.
+- **Definitive empty state:** when `results` is empty, say so explicitly and echo the effective
+  filters (query + normalized date window + any title/transcript/attendee/channel/folder
+  filters) so the agent can see exactly what was searched.
 - Browse mode (empty query) is not special-cased in output — same table.
 
 ## Actions
