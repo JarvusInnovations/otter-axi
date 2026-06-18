@@ -40,9 +40,11 @@ branch. Document the one-time manual prerequisites (org token + npm Trusted Publ
 - [x] `ci.yml` runs build+test on push/PR to main+develop and **passes green on both** (runs
       27763423689 main, 27763418468 develop).
 - [x] `develop` branch exists on the remote (pushed from `main`).
-- [~] `release-prepare` **runs and is correctly wired** — it authenticated, found no prior tag
-      (→ `v0.1.0`), and no-opped on `No commits between main and develop` (develop == main at
-      bootstrap). It will open the `Release: v*` PR on the first real `develop` commit.
+- [x] `release-prepare` **opens the Release PR** — verified: the closeout commit gave `develop`
+      its first real diff, and `release-prepare` opened **PR #1 "Release: v0.1.0"** with the bot
+      `## Changelog` comment (attributed `@themightychris`). `release-validate` ran; the PR is
+      `MERGEABLE` (its `action_required` check awaits the BOT-token/Trusted-Publishing prereqs).
+      (The earlier empty-diff `develop == main` push correctly no-opped.)
 - [x] Manual prerequisites (BOT_GITHUB_TOKEN, npm Trusted Publishing) documented in
       `specs/architecture.md` and surfaced to the user.
 
