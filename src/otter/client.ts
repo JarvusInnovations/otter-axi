@@ -17,7 +17,8 @@ export interface Meeting {
   title?: string;
   url?: string;
   start_time?: string;
-  duration?: number;
+  /** Pre-humanized by upstream, e.g. "3h 51m". */
+  duration?: string;
   short_summary?: string;
   action_items?: unknown[];
 }
@@ -29,7 +30,7 @@ export interface Transcript {
   text: string;
   metadata?: {
     action_items?: unknown[];
-    duration?: number;
+    duration?: string;
     short_summary?: string;
     start_time?: string;
   };

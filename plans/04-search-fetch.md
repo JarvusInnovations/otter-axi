@@ -1,5 +1,5 @@
 ---
-status: planned
+status: done
 depends: [03-auth, 01-auth-spike]
 specs:
   - specs/commands/search.md
@@ -36,17 +36,21 @@ schemas, so display columns and preview rules are real, not guessed).
 
 ## Validation
 
-- [ ] `otter-axi search -q "roadmap review" --after 30d` returns a populated TOON table
-      (columns `id,title,start,dur,summary,ai:N`; header count `N`, never `N of M`).
-- [ ] `otter-axi search --after 2026/05/01 --before 2026/05/07` (empty query, browse) works.
-- [ ] The extra filters map through: `--in-transcript`, `--channel`, `--folder`, `--mine`;
-      `username` is auto-filled from the cached profile (not a flag).
-- [ ] Zero-result search prints a definitive empty state echoing the effective filters.
-- [ ] `otter-axi fetch <id>` previews; `--out` writes full transcript + confirmation; `--full`
-      prints the whole body.
-- [ ] `otter-axi fetch https://otter.ai/u/<id>?tab=chat` normalizes the URL and succeeds.
-- [ ] Missing fetch arg exits 2; unknown id yields a definitive error → `search`.
-- [ ] `home` renders live account state and degrades cleanly when logged out.
+- [x] `otter-axi search … --after 30d` returns a populated TOON table (columns
+      `id,title,start,dur,summary,ai`). **Live: 14 matched, table renders.** Header reports
+      `matched: N` + `shown: K` when capped (per the refined spec), never a fake upstream total.
+- [x] `otter-axi search --after … --before …` (empty query, browse) works live.
+- [x] The extra filters are wired (`--in-transcript`→`keywords_in_transcript`,
+      `--channel`,`--folder`,`--mine`→`include_shared_meetings=false`); `username` auto-filled
+      from the cached profile. (Mapping verified; not every filter exercised against live data.)
+- [x] Zero-result search prints a definitive empty state echoing the effective filters (live).
+- [x] `otter-axi fetch <id>` previews; `--out` wrote 174 246 chars + confirmation; `--full`
+      piped the raw transcript (1 283 lines) — all verified live.
+- [x] `otter-axi fetch https://otter.ai/u/<id>?tab=chat` URL normalization (unit-tested).
+- [x] Missing fetch arg exits 2; unknown-id path wraps the error with a `→ search` hint.
+- [~] `home` renders the **cached** account (logged-in account / logged-out onboarding) and
+      degrades cleanly. Intentionally cache-only (no network) to keep the SessionStart payload
+      fast — live recent-meetings on home deferred (see follow-ups).
 
 ## Risks / unknowns
 
@@ -57,8 +61,15 @@ schemas, so display columns and preview rules are real, not guessed).
 
 ## Notes
 
-_(closeout)_
+Built `src/dates.ts` (ISO + relative `7d/2w/3m/1y` → `YYYY/MM/DD`), real `search`/`fetch`
+commands, and corrected one live finding: **`duration` is a pre-humanized string** (`"3h 51m"`),
+not seconds — dropped the `humanizeDuration` helper and fixed the type + spec. `fetch --full`
+returns a raw string (SDK passes strings through unchanged) so it pipes cleanly; default preview
+caps the body at 1200 chars with the standard truncation marker. 11 unit tests pass. Verified
+end-to-end against the live account. No PR — local `main`, pushed.
 
 ## Follow-ups
 
-_(closeout)_
+- **Deferred:** optional live "recent meetings" on `home` (would need a cached snapshot refreshed
+  on search to preserve the fast, network-free SessionStart payload).
+- **Spec-corrected:** `duration` string type recorded in `specs/api/mcp-server.md`.

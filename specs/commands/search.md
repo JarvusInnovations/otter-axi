@@ -45,8 +45,8 @@ Calls MCP `search` with the mapped params (omitting absent ones). Requires valid
   analyzing ([find-and-pull](../principles.md#find-and-pull-nothing-more)). Long titles/summaries
   truncated with the standard marker unless `--full`.
 - **No upstream total exists** — `search` returns the full matched set with no count/pagination
-  wrapper. The header count is therefore `N` (or `N shown` when `--limit` caps the rows),
-  never `N of M`.
+  wrapper, so the full count is simply the array length. The header reports `matched: N`; when
+  `--limit` caps the rows it also reports `shown: K`. Never invent an `N of M` upstream total.
 - **Definitive empty state:** when `results` is empty, say so explicitly and echo the effective
   filters (query + normalized date window + any title/transcript/attendee/channel/folder
   filters) so the agent can see exactly what was searched.

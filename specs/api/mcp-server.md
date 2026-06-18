@@ -98,7 +98,7 @@ schema (confirmed; all params except `query` are optional, nullable, default `""
   | `title` | string | Often literally `"Note"` when un-renamed. |
   | `url` | string | `https://otter.ai/u/<id>`. |
   | `start_time` | string | Meeting start timestamp. |
-  | `duration` | number | Length (seconds). |
+  | `duration` | string | Pre-humanized, e.g. `"3h 51m"`. |
   | `short_summary` | string | One-line generated summary. |
   | `action_items` | array | Generated action items (may be empty). |
 
@@ -110,7 +110,7 @@ schema (confirmed; all params except `query` are optional, nullable, default `""
     "title": "Weekly roadmap review",
     "url": "https://otter.ai/u/aBcDeFgHiJkLmNoPqRsTuVwXyZ0",
     "start_time": "2026-05-04 10:00:00",
-    "duration": 1850,
+    "duration": "31m",
     "short_summary": "Reviewed milestones and reprioritized the backlog.",
     "action_items": ["Send recap to the team"]
   } ] }
@@ -135,7 +135,7 @@ Pull a full transcript.
     "title": "Weekly roadmap review",
     "url": "https://otter.ai/u/aBcDeFgHiJkLmNoPqRsTuVwXyZ0",
     "text": "[0:00:00] Speaker 1: Thanks everyone for joining…\n[0:00:12] Speaker 2: Happy to be here…",
-    "metadata": { "action_items": [], "duration": 1850, "short_summary": "…", "start_time": "2026-05-04 10:00:00" }
+    "metadata": { "action_items": [], "duration": "31m", "short_summary": "…", "start_time": "2026-05-04 10:00:00" }
   }
   ```
 
