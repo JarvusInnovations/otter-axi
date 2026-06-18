@@ -17,9 +17,12 @@ any agent session or shell, with refresh handled silently.
 ## Install & authenticate
 
 ```sh
-npx -y otter-axi auth login    # one-time browser approval
+npm install -g otter-axi       # install the CLI on your PATH
+otter-axi auth login           # one-time browser approval
 otter-axi doctor               # config → credentials → MCP reachable
 ```
+
+Or run any command ad hoc without installing: `npx -y otter-axi <command>`.
 
 Tokens are stored in `~/.config/otter-axi/config.json` (mode `0600`) and refreshed
 automatically; they are never printed. Read-only scopes: `profile:read`, `conversations:read`.
