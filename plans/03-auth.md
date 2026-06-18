@@ -1,5 +1,5 @@
 ---
-status: planned
+status: done
 depends: [02-scaffold]
 specs:
   - specs/behaviors/auth.md
@@ -44,13 +44,18 @@ parallel with 01's spec write-up.
 
 ## Validation
 
-- [ ] `otter-axi auth login` registers a client, completes consent, and stores tokens (0600).
-- [ ] `otter-axi auth status` shows the account email; `--offline` makes no network call.
-- [ ] An expired access token is silently refreshed before a call; a 401 triggers one
-      refresh+retry, and a failed refresh yields `AxiError("AUTH")` → `Run otter-axi auth login`.
-- [ ] `otter-axi auth logout` revokes + clears tokens; second logout is a no-op (exit 0).
-- [ ] No command other than `auth login` ever blocks on interaction.
-- [ ] Tokens/secrets never appear in any command output.
+- [x] `otter-axi auth login` registers a client, completes consent, stores tokens (0600).
+      **Verified live** end-to-end (`chris@jarv.us`); config file is `-rw-------`.
+- [x] `otter-axi auth status` shows the account email; `--offline` makes no network call.
+- [~] Silent pre-expiry refresh (60s buffer) + refresh-once-on-401 retry + `AxiError("AUTH")`
+      on failed refresh are **implemented**; the actual expiry/401 round-trip wasn't exercised
+      live (token still fresh) — deferred to first real refresh.
+- [x] `otter-axi auth logout` revokes (best-effort) + clears tokens; second logout no-op (exit 0).
+- [x] No command other than `auth login` ever blocks on interaction.
+- [x] Tokens/secrets never appear in any command output (status/doctor show email only).
+- [x] **Bonus, verified live:** `client.ts` `getUser`/`search`/`fetch` work — `search` browse
+      returned 14 results with the spec'd fields; `fetch` returned a 174k-char `[H:MM:SS]`
+      transcript with matching `id` + metadata.
 
 ## Risks / unknowns
 
@@ -61,8 +66,30 @@ parallel with 01's spec write-up.
 
 ## Notes
 
-*(closeout)*
+Did **not** use the SDK's provider-callback model; instead orchestrated the SDK's low-level
+OAuth functions (`discoverOAuthProtectedResourceMetadata`, `discoverAuthorizationServerMetadata`,
+`registerClient`, `startAuthorization`, `exchangeAuthorization`, `refreshAuthorization`) directly
+for full two-phase control, and used `StreamableHTTPClientTransport` with a bearer via
+`requestInit` for data calls. Two-phase login persists pending state (`pending-auth.json`, 0600);
+DCR registers a public client across loopback ports 41789-92.
+
+**Two live-only bugs found + fixed during end-to-end validation:**
+
+1. `exchangeAuthorization` without `metadata` made the SDK guess `/token` → nginx **405**. Fix:
+   pass `metadata: disc.asMetadata` so it uses the real `/oauth/token`.
+2. `search`/`fetch` payloads are **double-wrapped** (an inner MCP content envelope inside
+   `content[0].text`); unwrapping one layer yielded 0 results. Fix: `payloadText()` unwraps the
+   second layer. `get_user_info` is single-wrapped prose (so auth worked but search didn't).
+   Both corrected in `specs/api/mcp-server.md`.
+
+Also: loopback page now sends `charset=utf-8` (fixes the garbled em-dash). No PR — local `main`,
+pushed.
 
 ## Follow-ups
 
-*(closeout)*
+- **Deferred:** exercise the real refresh round-trip when the access token actually expires;
+  confirm whether Otter rotates the refresh_token.
+- **Tracked as spec fix:** the double-wrap + 405/metadata findings are recorded in
+  `specs/api/mcp-server.md`.
+- **Enables plan 04:** `client.ts` (`getUser`/`search`/`fetchTranscript`) is live-verified, so
+  the search/fetch commands just need flag wiring + output formatting.

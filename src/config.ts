@@ -107,3 +107,46 @@ export function deleteConfig(): void {
 export function isLoggedIn(cfg: Config): boolean {
   return Boolean(cfg.tokens?.access_token);
 }
+
+// Pending auth (two-phase login) ──────────────────────────────────────
+/**
+ * In-flight login state persisted between `auth login --no-wait` (prepare) and
+ * `auth login --wait` (bind loopback + exchange). Holds the PKCE verifier and the exact
+ * redirect_uri/port so the second phase — possibly a separate process — can complete.
+ */
+export interface PendingAuth {
+  verifier: string;
+  redirect_uri: string;
+  port: number;
+  resource: string;
+  auth_server: string;
+  url: string;
+  expires_at: number;
+}
+
+export function pendingPath(): string {
+  return join(configDir(), "pending-auth.json");
+}
+
+export function readPending(): PendingAuth | undefined {
+  const path = pendingPath();
+  if (!existsSync(path)) return undefined;
+  try {
+    return JSON.parse(readFileSync(path, "utf-8")) as PendingAuth;
+  } catch {
+    return undefined;
+  }
+}
+
+export function writePending(pending: PendingAuth): void {
+  const dir = configDir();
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
+  writeFileSync(pendingPath(), `${JSON.stringify(pending, null, 2)}\n`, {
+    mode: 0o600,
+  });
+}
+
+export function clearPending(): void {
+  const path = pendingPath();
+  if (existsSync(path)) rmSync(path);
+}

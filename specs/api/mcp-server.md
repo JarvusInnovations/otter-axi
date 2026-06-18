@@ -50,8 +50,10 @@ authoritative `tools/list` and live tool calls in the plan-01 spike. All example
 **synthetic**; real payloads were never committed.
 
 Every tool result comes back through MCP's standard envelope: `{ content: [{ type: "text",
-text: "<payload>" }], structuredContent, isError }`. The CLI reads `content[0].text` (a string;
-JSON for `search`/`fetch`, prose for `get_user_info`) and parses/reshapes it.
+text: "<payload>" }], structuredContent, isError }`. **`search` and `fetch` double-wrap** — the
+outer `content[0].text` is *itself* an MCP content envelope whose inner `text` holds the real
+JSON (`{results}` / `{id,…}`); the CLI must unwrap **two** layers for those. `get_user_info` is
+single-wrapped and its `content[0].text` is **prose, not JSON**.
 
 ### `get_user_info`
 
