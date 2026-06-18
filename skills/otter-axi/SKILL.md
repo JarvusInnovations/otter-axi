@@ -49,12 +49,16 @@ Tokens live in `~/.config/otter-axi/config.json` (mode 0600) and are never print
 2. **Pull a transcript** with `fetch` — takes an id (from search) or an `otter.ai/u/<id>` URL:
 
    ```sh
-   otter-axi fetch <id>               # metadata header + preview
-   otter-axi fetch <id> --out talk.txt   # full transcript to a file
-   otter-axi fetch <id> --full           # raw transcript to stdout (pipe it)
+   otter-axi fetch <id>                    # metadata header + preview
+   otter-axi fetch <id> --full             # verbatim transcript to stdout (pipe it)
+   otter-axi fetch <id> --text-out t.txt   # verbatim transcript to a file
+   otter-axi fetch <id> --json-out t.json  # parsed segments [{start,speaker,text}]
+   otter-axi fetch <id> --csv-out t.csv    # parsed segments as CSV (--tsv-out for TSV)
    ```
 
-   Transcripts are formatted `[H:MM:SS] Speaker N: …` and returned verbatim.
+   Transcripts are `[H:MM:SS] Speaker N: …`. Default/`--full`/`--text-out` are verbatim; the
+   `--json-out`/`--csv-out`/`--tsv-out` modes parse into `{start,speaker,text}` segments via
+   otter-axi's own lossless parser (so you don't re-derive it). At most one output mode per call.
 
 ## Notes
 

@@ -42,10 +42,16 @@ Flags: `-q/--query`, `--after`/`--before` (ISO or relative `7d`/`2w`/`3m`/`1y`),
 **Pull a transcript** by id (from search) or `otter.ai/u/<id>` URL:
 
 ```sh
-otter-axi fetch <id>                # metadata + preview
-otter-axi fetch <id> --out talk.txt # full transcript to a file
-otter-axi fetch <id> --full         # raw transcript to stdout (for piping)
+otter-axi fetch <id>                 # metadata + preview
+otter-axi fetch <id> --full          # verbatim transcript to stdout (for piping)
+otter-axi fetch <id> --text-out t.txt   # verbatim transcript to a file
+otter-axi fetch <id> --json-out t.json  # parsed segments [{start,speaker,text}]
+otter-axi fetch <id> --csv-out t.csv    # parsed segments as CSV  (--tsv-out for TSV)
 ```
+
+The segment formats (`--json-out`/`--csv-out`/`--tsv-out`) parse the `[H:MM:SS] Speaker N: …`
+transcript into `{start, speaker, text}` rows — otter-axi owns one tested, lossless parser so
+agents don't re-derive it. Verbatim text stays the default; the parse never drops content.
 
 ## Commands
 
@@ -56,7 +62,7 @@ otter-axi fetch <id> --full         # raw transcript to stdout (for piping)
 | `auth status [--offline]` | Show the connected account |
 | `auth logout` | Revoke + clear stored tokens |
 | `search [query…] [flags]` | Find/browse meetings (metadata only) |
-| `fetch <id\|url> [--out\|--full]` | Pull a full transcript |
+| `fetch <id\|url> [--full\|--text-out\|--json-out\|--csv-out\|--tsv-out]` | Pull a transcript (verbatim or parsed segments) |
 | `doctor` | Tiered connectivity diagnostics |
 | `setup hooks` | Install the SessionStart hook (Claude Code / Codex / OpenCode) |
 
