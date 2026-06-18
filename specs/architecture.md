@@ -79,3 +79,23 @@ to find-and-pull (see [principles.md](principles.md)); no write or analysis comm
   interface (`search()`, `fetch()`, `getUser()`), so if the user ever gains Enterprise REST
   access a second adapter can slot in without touching command code. We are not building that
   adapter now.
+
+## CI & release
+
+Mirrors the sibling AXI tools (the Jarvus develop→main Release-PR automation):
+
+- **CI** (`.github/workflows/ci.yml`) — on push/PR to `main` and `develop`: checkout, pin
+  node `22.22.3` + bun `1.3.14`, `bun install --frozen-lockfile`, `bun run build`,
+  `bun run test`. Must be green on every Release PR.
+- **Release flow** — `main` is the released branch; `develop` is the integration branch.
+  Pushing `develop` triggers `release-prepare` (opens/updates the `Release: vX.Y.Z` PR into
+  `main` with a bot changelog); `release-validate` gates the PR; **merging the PR publishes**
+  via `release-publish`, which cuts the tag + GitHub release. All three delegate to
+  `JarvusInnovations/infra-components@channels/github-actions/release-*/latest`.
+- **npm publish** (`.github/workflows/publish-npm.yml`) — on GitHub `release: published`:
+  build and `npm publish --provenance --access public` via **Trusted Publishing** (OIDC,
+  `id-token: write`, node 24). The package is public (`otter-axi`).
+- **Prerequisites (manual, one-time):** the org `BOT_GITHUB_TOKEN` secret must be available
+  to the repo (used by `release-publish`), and npm **Trusted Publishing** must be configured
+  on npmjs.com linking `JarvusInnovations/otter-axi` + `publish-npm.yml` (a first publish may
+  need a manual bootstrap before OIDC takes over).
