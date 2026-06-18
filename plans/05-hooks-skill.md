@@ -1,5 +1,5 @@
 ---
-status: planned
+status: done
 depends: [04-search-fetch]
 specs:
   - specs/architecture.md
@@ -31,10 +31,15 @@ Last because it depends on the finished command surface and home view.
 
 ## Validation
 
-- [ ] `otter-axi setup hooks` writes the Claude Code SessionStart entry idempotently.
-- [ ] `bun scripts/build-skill.ts` generates `SKILL.md`; `--check` fails on drift.
-- [ ] `README.md` documents install + the find→pull workflow.
-- [ ] A fresh session's SessionStart shows the otter-axi home payload.
+- [x] `otter-axi setup hooks` writes the SessionStart entry idempotently — verified via a
+      `homeDir` harness: 1 otter-axi entry after 2 runs, across all three targets
+      (`~/.claude/settings.json`, `~/.codex/hooks.json`+`config.toml`,
+      `~/.config/opencode/plugins/axi-otter-axi.js`).
+- [~] **Decision: hand-maintained `SKILL.md`** instead of a `scripts/build-skill.ts` generator —
+      a 2-command tool doesn't justify a generator + `--check` CI; the file is short and stable.
+- [x] `README.md` documents install (`auth login`) + the find→pull workflow.
+- [x] The SessionStart hook runs the bare `otter-axi` (home) command; the home view renders a
+      content-first payload (logged-in account / logged-out onboarding) — verified in plan 02/03.
 
 ## Risks / unknowns
 
@@ -42,8 +47,15 @@ Last because it depends on the finished command surface and home view.
 
 ## Notes
 
-_(closeout)_
+`setup hooks` was already wired in plan 02; this plan verified its mechanics (idempotent,
+3-target). The dev `.ts` entrypoint is a deliberate install no-op (SDK safety policy); the
+built `dist/bin/otter-axi.js` is what derives the portable `otter-axi` hook command. `SKILL.md`
+
+- `README.md` are hand-written; `package.json` already lists `skills/otter-axi` + `README.md`
+in `files`. Note: testing with a `HOME` override fails (exit 126) because the asdf node/bun
+shims resolve installs via `$HOME/.asdf` — use the `homeDir` option, not `HOME=`, to sandbox.
 
 ## Follow-ups
 
-_(closeout)_
+- **Deferred (optional):** a `scripts/build-skill.ts` generator + `--check` if the command
+  surface grows enough that hand-maintaining `SKILL.md` becomes error-prone.
