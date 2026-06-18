@@ -14,9 +14,38 @@ extracting action items, scoring sentiment, syncing to a CRM — is the *consume
 > surface we must maintain and a place for the tool to impose its own opinions on data the
 > user wants raw.
 
-This rules out: summary/insight/outline commands, transcript post-processing, dedup or
-"smart matching," and any write operation. When tempted to add a capability, ask whether it
-helps *find* a conversation or *pull* its transcript. If not, it doesn't belong here.
+This rules out: summary/insight/outline commands, sentiment, dedup or "smart matching," and
+any write operation. When tempted to add a capability, ask whether it helps *find* a
+conversation or *pull* its transcript. If not, it doesn't belong here.
+
+## Polyfill the missing API
+
+Otter gives non-Enterprise accounts no proper API, only the hosted MCP server. A second job
+sits alongside find-and-pull: make that MCP **behave like the clean API Otter doesn't offer**,
+absorbing its transport quirks so consumers get a stable, typed surface and never touch the
+MCP's warts. This is why otter-axi already unwraps the double-nested `content` envelopes,
+normalizes `otter.ai/u/<id>` URLs to ids, exposes a typed `search`/`fetch`/`getUser` client, and
+parses the `[H:MM:SS] Speaker N: …` transcript blob into `{start,speaker,text}` segments.
+
+> Why (from the user): "part of this is us polyfilling needing to use their MCP instead of a
+> proper API — so we own the nuances of using the MCP as an API." Transcripts are long and need
+> tooling to explore and reprocess; that's an API-shape gap we fill.
+
+**The discriminator** — own it when it's a nuance of the *transport / MCP shape*: encoding,
+envelopes, a text blob standing in for structured data, id/URL normalization, pagination,
+retries. Leave it out when it's *semantic interpretation of the content* (what the meeting means
+— summaries, sentiment, "smart" matching); that's [find-and-pull](#find-and-pull-nothing-more)
+territory and stays with the consumer. Net line across both principles: **structure / format /
+encoding is ours; meaning is the consumer's.**
+
+This is also why we *don't* add mechanical export formats to `search`: its results already come
+back clean and tabular from our client, so there's no API-shape nuance to polyfill. The
+transcript is the opposite — raw text where structured data should be — so we own the parse.
+
+Two guarantees keep the polyfill honest: the **verbatim form stays the default** (parsed/
+structured outputs are opt-in), and every such conversion is **lossless** (e.g. the transcript
+parser preserves every character, keeping unrecognized lines as continuations rather than
+dropping them — verified by a round-trip test).
 
 ## One-time auth, headless forever after
 

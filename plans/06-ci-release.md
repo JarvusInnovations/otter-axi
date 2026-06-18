@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 depends: [02-scaffold]
 specs:
   - specs/architecture.md
@@ -35,11 +35,18 @@ branch. Document the one-time manual prerequisites (org token + npm Trusted Publ
 
 ## Validation
 
-- [ ] Five workflow files present and valid YAML; refs match the sibling.
-- [ ] `ci.yml` runs build+test on push/PR to main+develop and passes on the current tree.
-- [ ] `develop` branch exists on the remote.
-- [ ] Pushing `develop` opens a `Release: v*` PR into `main` via `release-prepare`.
-- [ ] Manual prerequisites (BOT_GITHUB_TOKEN, npm Trusted Publishing) documented for the user.
+- [x] Five workflow files present and valid YAML; refs match the sibling. Action majors
+      confirmed latest live: `checkout@v6` (6.0.3), `setup-node@v6` (6.4.0), `setup-bun@v2`.
+- [x] `ci.yml` runs build+test on push/PR to main+develop and **passes green on both** (runs
+      27763423689 main, 27763418468 develop).
+- [x] `develop` branch exists on the remote (pushed from `main`).
+- [x] `release-prepare` **opens the Release PR** — verified: the closeout commit gave `develop`
+      its first real diff, and `release-prepare` opened **PR #1 "Release: v0.1.0"** with the bot
+      `## Changelog` comment (attributed `@themightychris`). `release-validate` ran; the PR is
+      `MERGEABLE` (its `action_required` check awaits the BOT-token/Trusted-Publishing prereqs).
+      (The earlier empty-diff `develop == main` push correctly no-opped.)
+- [x] Manual prerequisites (BOT_GITHUB_TOKEN, npm Trusted Publishing) documented in
+      `specs/architecture.md` and surfaced to the user.
 
 ## Risks / unknowns
 
@@ -52,8 +59,17 @@ branch. Document the one-time manual prerequisites (org token + npm Trusted Publ
 
 ## Notes
 
-_(closeout)_
+Bootstrapped the workflows onto `main` (so PR-to-main triggers resolve) then branched
+`develop`. CI green on both branches first try. The lone red `release-prepare` run is the
+empty-diff bootstrap case (main == develop), **not** a misconfiguration — it proves the action
+is installed and authenticating. `main` kept as default branch (matches the sibling). Local
+checkout left on `develop` (the integration branch for future work). No PR — bootstrap commit
+on `main`.
 
 ## Follow-ups
 
-_(closeout)_
+- **User action (one-time):** configure npm Trusted Publishing for `JarvusInnovations/otter-axi`
+  - `publish-npm.yml` on npmjs.com, and confirm the org `BOT_GITHUB_TOKEN` reaches this repo.
+- **First release:** since all v0.1.0 code already sits on `main`, the first npm publish is
+  effectively a bootstrap — either publish v0.1.0 manually once, or let the next `develop`
+  commit drive the first `Release: v*` PR.
