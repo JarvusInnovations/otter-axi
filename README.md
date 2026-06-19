@@ -47,14 +47,17 @@ Flags: `-q/--query`, `--after`/`--before` (ISO or relative `7d`/`2w`/`3m`/`1y`),
 ```sh
 otter-axi fetch <id>                 # metadata + preview
 otter-axi fetch <id> --full          # verbatim transcript to stdout (for piping)
-otter-axi fetch <id> --text-out t.txt   # verbatim transcript to a file
-otter-axi fetch <id> --json-out t.json  # parsed segments [{start,speaker,text}]
-otter-axi fetch <id> --csv-out t.csv    # parsed segments as CSV  (--tsv-out for TSV)
+otter-axi fetch <id> --json-out      # parsed segments → auto-path in the OS temp dir
+otter-axi fetch <id> --json-out=t.json  # …or an explicit path
+otter-axi fetch <id> --csv-out          # CSV (--tsv-out / --text-out likewise)
 ```
 
 The segment formats (`--json-out`/`--csv-out`/`--tsv-out`) parse the `[H:MM:SS] Speaker N: …`
 transcript into `{start, speaker, text}` rows — otter-axi owns one tested, lossless parser so
-agents don't re-derive it. Verbatim text stays the default; the parse never drops content.
+agents don't re-derive it. Per the [AXI side-channel-file convention](https://github.com/kunchenguid/axi/issues/32),
+the path is optional (bare → `<os-tmpdir>/otter-axi/<ts>-<id>.<ext>` — transient scratch the OS
+cleans up), and writing a file is additive: stdout keeps the preview and adds `wrote:`/`columns:`
+and a `jq` hint.
 
 ## Commands
 
