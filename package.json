@@ -37,6 +37,14 @@
     "vitest": "^4.1.9"
   },
   "author": "Jarvus Innovations",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JarvusInnovations/otter-axi.git"
+  },
+  "homepage": "https://github.com/JarvusInnovations/otter-axi#readme",
+  "bugs": {
+    "url": "https://github.com/JarvusInnovations/otter-axi/issues"
+  },
   "keywords": [
     "otter",
     "otter.ai",
