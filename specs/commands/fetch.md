@@ -30,9 +30,14 @@ The `*-out` flags follow the AXI side-channel-file convention
 ([axi#32](https://github.com/kunchenguid/axi/issues/32), as in `metabase-axi`):
 
 - **Path is optional.** A bare flag auto-writes
-  `$XDG_CONFIG_HOME/otter-axi/exports/<ISO-timestamp>-<id>.<ext>`; `--json-out=path` (the `=`
+  `<os-tmpdir>/otter-axi/<ISO-timestamp>-<id>.<ext>` — an auto-generated export is **ephemeral
+  scratch**, so it goes in the OS temp dir (`/tmp` on Linux, `$TMPDIR` on macOS, which the OS
+  prunes), never under `~/.config` (durable state nothing prunes). `--json-out=path` (the `=`
   form, so it doesn't swallow the `<id>` positional) writes an explicit location (`~/`, relative,
-  and absolute paths all accepted).
+  and absolute paths accepted), for when the file should persist.
+- **Auto-generated export files are written `0600`** (owner-only) — transcripts are sensitive and
+  the OS temp dir is world-readable on some platforms. An explicit `--<fmt>-out=path` is the
+  caller's responsibility and uses the default umask.
 - **Writing is additive, never destructive to the preview.** stdout keeps the normal metadata +
   transcript preview and *adds* `wrote: <path>`, `bytes`, and — for the segment formats —
   `segments`, `columns: start, speaker, text`, plus a `help[]` `jq` example pointed at the file

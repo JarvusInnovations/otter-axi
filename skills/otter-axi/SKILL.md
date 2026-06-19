@@ -59,7 +59,7 @@ Tokens live in `~/.config/otter-axi/config.json` (mode 0600) and are never print
    Transcripts are `[H:MM:SS] Speaker N: …`. Default/`--full`/`--text-out` are verbatim; the
    `--json-out`/`--csv-out`/`--tsv-out` modes parse into `{start,speaker,text}` segments via
    otter-axi's own lossless parser (so you don't re-derive it). Path is optional (bare →
-   auto-path under `~/.config/otter-axi/exports/`; `=path` for explicit); writing is additive —
+   auto-path in the OS temp dir `<os-tmpdir>/otter-axi/`; `=path` for explicit); writing is additive —
    stdout keeps the preview and adds `wrote:`/`columns:` + a `jq` hint. One output mode per call.
 
 ## Notes
