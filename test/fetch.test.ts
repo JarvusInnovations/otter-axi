@@ -1,15 +1,12 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
+import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { resolveExportPath } from "../src/commands/fetch.js";
+import { resolveExportPath, writeExport } from "../src/commands/fetch.js";
 
 const now = new Date("2026-06-19T14:54:29.123Z");
 
 describe("resolveExportPath", () => {
-  afterEach(() => {
-    delete process.env.OTTER_AXI_CONFIG_DIR;
-  });
-
   it("returns an explicit absolute path unchanged", () => {
     expect(resolveExportPath("/tmp/x.json", "json", "abc", now)).toBe("/tmp/x.json");
   });
@@ -22,10 +19,22 @@ describe("resolveExportPath", () => {
     expect(resolveExportPath("out/x.tsv", "tsv", "abc", now)).toBe(resolve("out/x.tsv"));
   });
 
-  it("auto-paths under the exports dir, keyed by timestamp + id + ext", () => {
-    process.env.OTTER_AXI_CONFIG_DIR = "/tmp/otter-cfg";
+  it("auto-paths under the OS temp dir, keyed by timestamp + id + ext", () => {
     expect(resolveExportPath(undefined, "json", "abc123", now)).toBe(
-      "/tmp/otter-cfg/exports/2026-06-19T14-54-29-123Z-abc123.json",
+      join(tmpdir(), "otter-axi", "2026-06-19T14-54-29-123Z-abc123.json"),
     );
+  });
+});
+
+describe("writeExport", () => {
+  let scratch: string;
+  afterEach(() => rmSync(scratch, { recursive: true, force: true }));
+
+  it("writes auto-generated files owner-only (0600)", () => {
+    scratch = mkdtempSync(join(tmpdir(), "otter-axi-test-"));
+    const p = join(scratch, "auto.json");
+    writeExport(p, "data", true);
+    expect(readFileSync(p, "utf-8")).toBe("data");
+    expect(statSync(p).mode & 0o777).toBe(0o600);
   });
 });

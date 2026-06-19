@@ -1,9 +1,8 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { Buffer } from "node:buffer";
 import { AxiError } from "axi-sdk-js";
-import { exportsDir } from "../config.js";
 import { hasFlag, parseArgs, strFlag } from "../flags.js";
 import { fetchTranscript } from "../otter/client.js";
 import { truncateCell } from "../output.js";
@@ -55,7 +54,11 @@ function expandPath(p: string): string {
   return isAbsolute(e) ? e : resolve(e);
 }
 
-/** Explicit path (expanded), or an auto path under the exports dir keyed by id + timestamp. */
+/**
+ * Explicit path (expanded), or an auto path in the OS temp dir keyed by timestamp + id.
+ * An auto-generated export is ephemeral scratch, so it goes in `os.tmpdir()` (OS-pruned) —
+ * never under `~/.config`, which nothing prunes. `os.tmpdir()` → `/tmp` on Linux, `$TMPDIR` on macOS.
+ */
 export function resolveExportPath(
   explicit: string | undefined,
   format: OutFormat,
@@ -64,7 +67,17 @@ export function resolveExportPath(
 ): string {
   if (explicit) return expandPath(explicit);
   const stamp = now.toISOString().replace(/[:.]/g, "-");
-  return join(exportsDir(), `${stamp}-${id}.${EXT[format]}`);
+  return join(tmpdir(), "otter-axi", `${stamp}-${id}.${EXT[format]}`);
+}
+
+/**
+ * Write an export file. Auto-generated files (no explicit path) land in a world-readable temp
+ * dir and may hold a sensitive transcript → owner-only `0600`. Explicit paths are the caller's
+ * responsibility and use the default umask.
+ */
+export function writeExport(path: string, body: string, auto: boolean): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, body, auto ? { mode: 0o600 } : undefined);
 }
 
 function jqHelp(format: OutFormat, path: string): string | undefined {
@@ -138,7 +151,6 @@ export async function fetchCommand(args: string[]): Promise<StructuredOutput | s
   const format = present[0].format;
   const explicit = present.map((m) => strFlag(parsed, m.flag)).find((v) => v !== undefined);
   const path = resolveExportPath(explicit, format, id);
-  mkdirSync(dirname(path), { recursive: true });
 
   let body: string;
   const extra: StructuredOutput = {};
@@ -155,7 +167,8 @@ export async function fetchCommand(args: string[]): Promise<StructuredOutput | s
     extra.segments = segments.length;
     extra.columns = "start, speaker, text";
   }
-  writeFileSync(path, body);
+  // Auto-generated (no explicit path) → owner-only 0600 (sensitive transcript in a temp dir).
+  writeExport(path, body, explicit === undefined);
 
   const help: string[] = [];
   const jq = jqHelp(format, path);
