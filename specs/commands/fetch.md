@@ -21,13 +21,24 @@ Default (no flag) is the preview.
 | Flag | Effect |
 |---|---|
 | `--full` | Print the entire **verbatim** transcript to stdout (raw, for piping). |
-| `--text-out <path>` (alias `--out`) | Write the verbatim transcript text to a file. |
-| `--json-out <path>` | Write parsed **segments** as a JSON array to a file. |
-| `--csv-out <path>` | Write parsed segments as CSV (`start,speaker,text`, RFC-4180 quoted). |
-| `--tsv-out <path>` | Write parsed segments as TSV (tab-separated; tabs/newlines in text escaped). |
+| `--text-out[=path]` (alias `--out`) | Write the verbatim transcript text to a file. |
+| `--json-out[=path]` | Write parsed **segments** as a JSON array to a file. |
+| `--csv-out[=path]` | Write parsed segments as CSV (`start,speaker,text`, RFC-4180 quoted). |
+| `--tsv-out[=path]` | Write parsed segments as TSV (tab-separated; tabs/newlines in text escaped). |
 
-All `*-out` modes return a confirmation object to stdout (path, byte count, segment count,
-distinct speakers) — never the body inline.
+The `*-out` flags follow the AXI side-channel-file convention
+([axi#32](https://github.com/kunchenguid/axi/issues/32), as in `metabase-axi`):
+
+- **Path is optional.** A bare flag auto-writes
+  `$XDG_CONFIG_HOME/otter-axi/exports/<ISO-timestamp>-<id>.<ext>`; `--json-out=path` (the `=`
+  form, so it doesn't swallow the `<id>` positional) writes an explicit location (`~/`, relative,
+  and absolute paths all accepted).
+- **Writing is additive, never destructive to the preview.** stdout keeps the normal metadata +
+  transcript preview and *adds* `wrote: <path>`, `bytes`, and — for the segment formats —
+  `segments`, `columns: start, speaker, text`, plus a `help[]` `jq` example pointed at the file
+  so an agent can query it without reading it first. `--text-out` adds only `wrote`/`bytes`.
+- One format per invocation; no generic extension-sniffing `--out` (the `--out` alias maps to
+  `--text-out` explicitly).
 
 ## Transcript parsing
 
@@ -61,11 +72,11 @@ and `metadata` is `{ action_items, duration, short_summary, start_time }`.
   pattern). Stdout shows the metadata header (`id`, `title`, `url`, `start` from `start_time`,
   `dur`, `short_summary`) plus a capped preview of `text` with a `…(truncated, N chars total)`
   marker. `action_items` shown as a count, not expanded.
-- `--text-out`/`--out <path>` writes the complete verbatim `text` to the file; `--full` prints
-  it to stdout. Both are byte-exact — no re-segmenting or relabeling.
-- `--json-out`/`--csv-out`/`--tsv-out <path>` writes the parsed segments to the file and returns
-  a confirmation `{ id, title, format, saved, bytes, segments, speakers }`. The body is never
-  dumped inline.
+- A `*-out` flag is **additive**: the preview above is still shown, plus `wrote: <path>`,
+  `bytes`, and (for the segment formats) `segments`, `columns: start, speaker, text`, and a
+  `help[]` `jq` line pointed at the file. The body is never dumped inline. `--text-out` writes
+  byte-exact verbatim `text`; the segment formats write parsed segments.
+- `--full` prints the whole verbatim `text` to stdout (byte-exact, for piping) — no preview.
 - **Not found / invalid id:** definitive `AxiError` naming the id, with a `help[]` pointing
   back to `search`.
 

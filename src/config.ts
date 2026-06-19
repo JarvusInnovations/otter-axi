@@ -61,6 +61,11 @@ export function configPath(): string {
   return join(configDir(), "config.json");
 }
 
+/** Default location for auto-pathed exports (bare `--json-out` etc.). */
+export function exportsDir(): string {
+  return join(configDir(), "exports");
+}
+
 // Read / write ────────────────────────────────────────────────────────
 export function defaultConfig(): Config {
   return { version: CONFIG_VERSION };

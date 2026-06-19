@@ -51,14 +51,16 @@ Tokens live in `~/.config/otter-axi/config.json` (mode 0600) and are never print
    ```sh
    otter-axi fetch <id>                    # metadata header + preview
    otter-axi fetch <id> --full             # verbatim transcript to stdout (pipe it)
-   otter-axi fetch <id> --text-out t.txt   # verbatim transcript to a file
-   otter-axi fetch <id> --json-out t.json  # parsed segments [{start,speaker,text}]
-   otter-axi fetch <id> --csv-out t.csv    # parsed segments as CSV (--tsv-out for TSV)
+   otter-axi fetch <id> --json-out         # parsed segments → auto-path under exports/
+   otter-axi fetch <id> --json-out=t.json  # …or an explicit path (note the = form)
+   otter-axi fetch <id> --csv-out          # CSV (--tsv-out / --text-out likewise)
    ```
 
    Transcripts are `[H:MM:SS] Speaker N: …`. Default/`--full`/`--text-out` are verbatim; the
    `--json-out`/`--csv-out`/`--tsv-out` modes parse into `{start,speaker,text}` segments via
-   otter-axi's own lossless parser (so you don't re-derive it). At most one output mode per call.
+   otter-axi's own lossless parser (so you don't re-derive it). Path is optional (bare →
+   auto-path under `~/.config/otter-axi/exports/`; `=path` for explicit); writing is additive —
+   stdout keeps the preview and adds `wrote:`/`columns:` + a `jq` hint. One output mode per call.
 
 ## Notes
 
