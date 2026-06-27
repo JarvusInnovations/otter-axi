@@ -19,11 +19,9 @@ export async function pickPort(candidates: number[]): Promise<number> {
     });
     if (free) return port;
   }
-  throw new AxiError(
-    `No free loopback port among ${candidates.join(", ")}`,
-    "AUTH",
-    ["Close whatever is using those ports and retry `otter-axi auth login`"],
-  );
+  throw new AxiError(`No free loopback port among ${candidates.join(", ")}`, "AUTH", [
+    "Close whatever is using those ports and retry `otter-axi auth login`",
+  ]);
 }
 
 /**
@@ -82,9 +80,7 @@ export async function startLoopback(port: number): Promise<Loopback> {
           timeoutMs,
         );
       });
-      return Promise.race([codePromise, timeout]).finally(() =>
-        clearTimeout(timer),
-      );
+      return Promise.race([codePromise, timeout]).finally(() => clearTimeout(timer));
     },
     close(): void {
       server.close();

@@ -30,9 +30,7 @@ const COMMAND_HELP: Record<string, string> = {
 };
 
 /** Build the CLI options. Overrides (e.g. `argv`, `stdout`) let tests drive dispatch. */
-export function cliOptions(
-  overrides: Partial<AxiCliOptions> = {},
-): AxiCliOptions {
+export function cliOptions(overrides: Partial<AxiCliOptions> = {}): AxiCliOptions {
   return {
     description: DESCRIPTION,
     version: readVersion(),
