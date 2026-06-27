@@ -43,11 +43,9 @@ export async function discover(): Promise<Discovery> {
   const authServer = (prm.authorization_servers?.[0] ?? "https://otter.ai/").toString();
   const asMetadata = await discoverAuthorizationServerMetadata(authServer);
   if (!asMetadata) {
-    throw new AxiError(
-      "Could not discover Otter's OAuth authorization-server metadata",
-      "AUTH",
-      ["Check connectivity to https://otter.ai and retry"],
-    );
+    throw new AxiError("Could not discover Otter's OAuth authorization-server metadata", "AUTH", [
+      "Check connectivity to https://otter.ai and retry",
+    ]);
   }
   return {
     resource: (prm.resource ?? "https://mcp.otter.ai/").toString(),
@@ -66,9 +64,7 @@ export async function ensureClient(
       cfg,
       client: {
         client_id: cfg.client.client_id,
-        ...(cfg.client.client_secret
-          ? { client_secret: cfg.client.client_secret }
-          : {}),
+        ...(cfg.client.client_secret ? { client_secret: cfg.client.client_secret } : {}),
       },
     };
   }
@@ -127,10 +123,7 @@ function tokensToConfig(t: OAuthTokens) {
     refresh_token: t.refresh_token,
     token_type: t.token_type,
     scope: t.scope,
-    expires_at:
-      typeof t.expires_in === "number"
-        ? Date.now() + t.expires_in * 1000
-        : undefined,
+    expires_at: typeof t.expires_in === "number" ? Date.now() + t.expires_in * 1000 : undefined,
   };
 }
 
@@ -157,13 +150,9 @@ export async function completeLogin(code: string): Promise<void> {
       resource: new URL(pending.resource),
     });
   } catch (e) {
-    throw new AxiError(
-      `Token exchange failed: ${(e as Error).message}`,
-      "AUTH",
-      [
-        "Authorization codes are short-lived — run `otter-axi auth login` and approve promptly",
-      ],
-    );
+    throw new AxiError(`Token exchange failed: ${(e as Error).message}`, "AUTH", [
+      "Authorization codes are short-lived — run `otter-axi auth login` and approve promptly",
+    ]);
   }
   writeConfig({ ...readConfig(), tokens: tokensToConfig(tokens) });
   clearPending();
@@ -184,9 +173,7 @@ export async function refreshTokens(): Promise<void> {
       metadata: disc.asMetadata,
       clientInformation: {
         client_id: cfg.client.client_id,
-        ...(cfg.client.client_secret
-          ? { client_secret: cfg.client.client_secret }
-          : {}),
+        ...(cfg.client.client_secret ? { client_secret: cfg.client.client_secret } : {}),
       },
       refreshToken: cfg.tokens.refresh_token,
       resource: new URL(disc.resource),
@@ -207,8 +194,9 @@ export async function revokeToken(): Promise<void> {
   if (!token || !cfg.client?.client_id) return;
   try {
     const disc = await discover();
-    const endpoint = (disc.asMetadata as Record<string, unknown>)
-      .revocation_endpoint as string | undefined;
+    const endpoint = (disc.asMetadata as Record<string, unknown>).revocation_endpoint as
+      | string
+      | undefined;
     if (!endpoint) return;
     await fetch(endpoint, {
       method: "POST",

@@ -65,7 +65,8 @@ export function segmentsToCsv(segments: Segment[]): string {
 
 /** Serialize segments to TSV; tabs/newlines inside text are escaped so rows stay one-per-line. */
 export function segmentsToTsv(segments: Segment[]): string {
-  const esc = (v: string) => v.replace(/\\/g, "\\\\").replace(/\t/g, "\\t").replace(/\r?\n/g, "\\n");
+  const esc = (v: string) =>
+    v.replace(/\\/g, "\\\\").replace(/\t/g, "\\t").replace(/\r?\n/g, "\\n");
   const rows = ["start\tspeaker\ttext"];
   for (const s of segments) {
     rows.push([s.start, s.speaker, s.text].map(esc).join("\t"));

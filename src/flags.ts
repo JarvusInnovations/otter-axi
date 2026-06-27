@@ -9,10 +9,7 @@ export interface ParsedArgs {
   flags: Record<string, string | boolean>;
 }
 
-export function parseArgs(
-  args: string[],
-  opts: { valued?: string[] } = {},
-): ParsedArgs {
+export function parseArgs(args: string[], opts: { valued?: string[] } = {}): ParsedArgs {
   const valued = new Set(opts.valued ?? []);
   const positionals: string[] = [];
   const flags: Record<string, string | boolean> = {};
