@@ -10,12 +10,7 @@ import {
   writeConfig,
 } from "../config.js";
 import { getUser } from "../otter/client.js";
-import {
-  completeLogin,
-  LOOPBACK_PORTS,
-  prepareLogin,
-  revokeToken,
-} from "../otter/oauth.js";
+import { completeLogin, LOOPBACK_PORTS, prepareLogin, revokeToken } from "../otter/oauth.js";
 import { pickPort, startLoopback } from "../otter/loopback.js";
 import type { StructuredOutput } from "../output.js";
 
@@ -35,11 +30,7 @@ const SUBCOMMANDS = new Set(["login", "status", "logout"]);
 
 function openBrowser(url: string): void {
   const cmd =
-    process.platform === "darwin"
-      ? "open"
-      : process.platform === "win32"
-        ? "start"
-        : "xdg-open";
+    process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
   try {
     spawn(cmd, [url], { stdio: "ignore", detached: true }).unref();
   } catch {

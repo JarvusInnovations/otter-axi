@@ -37,7 +37,8 @@ const VALUED = [
 export async function searchCommand(args: string[]): Promise<StructuredOutput> {
   const parsed = parseArgs(args, { valued: VALUED });
 
-  const query = parsed.positionals.join(" ") || strFlag(parsed, "query") || strFlag(parsed, "q") || "";
+  const query =
+    parsed.positionals.join(" ") || strFlag(parsed, "query") || strFlag(parsed, "q") || "";
   const params: Record<string, unknown> = { query };
 
   const after = strFlag(parsed, "after");

@@ -6,11 +6,7 @@ import { AxiError } from "axi-sdk-js";
 import { hasFlag, parseArgs, strFlag } from "../flags.js";
 import { fetchTranscript } from "../otter/client.js";
 import { truncateCell } from "../output.js";
-import {
-  parseTranscript,
-  segmentsToCsv,
-  segmentsToTsv,
-} from "../transcript.js";
+import { parseTranscript, segmentsToCsv, segmentsToTsv } from "../transcript.js";
 import type { StructuredOutput } from "../output.js";
 
 export const FETCH_HELP = `usage: otter-axi fetch <id|url> [output-mode]
@@ -130,9 +126,7 @@ export async function fetchCommand(args: string[]): Promise<StructuredOutput | s
     start: (t.metadata?.start_time ?? "").slice(0, 10),
     dur: t.metadata?.duration ?? "—",
     summary: t.metadata?.short_summary ?? "",
-    action_items: Array.isArray(t.metadata?.action_items)
-      ? t.metadata.action_items.length
-      : 0,
+    action_items: Array.isArray(t.metadata?.action_items) ? t.metadata.action_items.length : 0,
     chars: text.length,
     preview: truncateCell(text, PREVIEW_CHARS),
   };
@@ -174,5 +168,11 @@ export async function fetchCommand(args: string[]): Promise<StructuredOutput | s
   const jq = jqHelp(format, path);
   if (jq) help.push(jq);
 
-  return { ...base, wrote: path, bytes: Buffer.byteLength(body), ...extra, ...(help.length ? { help } : {}) };
+  return {
+    ...base,
+    wrote: path,
+    bytes: Buffer.byteLength(body),
+    ...extra,
+    ...(help.length ? { help } : {}),
+  };
 }
