@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 depends: [09-exports-to-tmpdir]
 specs:
   - specs/behaviors/invocation.md
@@ -66,18 +66,18 @@ hints and the skill from one `reference.ts` with a `docs:check` gate; the `--ver
 
 ## Validation
 
-- [ ] `search --querry x` exits 2 with `code: UNKNOWN_FLAG` and lists the valid flags.
-- [ ] Every command in the flag table rejects `--bogus` with exit 2 (sweep test).
-- [ ] Declared flags and each command's `--help` agree in both directions.
-- [ ] `fetch <id> --out` and `--out=path` exit 2 with a hint naming `--text-out[=path]`.
-- [ ] `fetch --json-out <id>` keeps `<id>` as the id; `fetch <id> --json-out t.json` is a
+- [x] `search --querry x` exits 2 with `code: UNKNOWN_FLAG` and lists the valid flags.
+- [x] Every command in the flag table rejects `--bogus` with exit 2 (sweep test).
+- [x] Declared flags and each command's `--help` agree in both directions.
+- [x] `fetch <id> --out` and `--out=path` exit 2 with a hint naming `--text-out[=path]`.
+- [x] `fetch --json-out <id>` keeps `<id>` as the id; `fetch <id> --json-out t.json` is a
       `USAGE` error naming `--json-out=t.json`.
-- [ ] `fetch --help` names the OS temp dir and no `~/.config` path.
-- [ ] `formatError`: `USAGE` / `UNKNOWN_FLAG` / `VALIDATION_ERROR` exit 2; a plain `Error`
+- [x] `fetch --help` names the OS temp dir and no `~/.config` path.
+- [x] `formatError`: `USAGE` / `UNKNOWN_FLAG` / `VALIDATION_ERROR` exit 2; a plain `Error`
       becomes `INTERNAL_ERROR`, exit 1, with a `doctor` hint and no stack.
-- [ ] `search --after 2026-02-30`, `--limit ten` and `--folder ""` are `VALIDATION_ERROR`s.
-- [ ] `config.json` loosened to `0644` is `0600` again after the next write.
-- [ ] Lint, format check, type check, build and tests green; the CI smoke script passes locally.
+- [x] `search --after 2026-02-30`, `--limit ten` and `--folder ""` are `VALIDATION_ERROR`s.
+- [x] `config.json` loosened to `0644` is `0600` again after the next write.
+- [x] Lint, format check, type check, build and tests green; the CI smoke script passes locally.
 
 ## Risks / unknowns
 
@@ -86,3 +86,21 @@ hints and the skill from one `reference.ts` with a `docs:check` gate; the `--ver
   needs a major version bump.
 - A missing `fetch` id changes code from `VALIDATION_ERROR` to `USAGE`; the exit status (2) is
   unchanged.
+
+## Notes
+
+- The parser is nexudus-axi's with three additions: the `optional` flag kind, function-valued
+  `deprecated` hints, and the repeated-value-flag check the house table lists but the
+  canonical parser does not yet implement. These are candidates to carry back upstream.
+- `search` used to let a positional query win over `--query`; that is now a
+  `VALIDATION_ERROR`, since picking a winner drops the other silently.
+- Error codes `AUTH`, `RATE_LIMIT` and `UPSTREAM` are unchanged. The house table names
+  `RATE_LIMITED` and `UNEXPECTED_RESPONSE`; renaming them is a separate breaking change.
+- Validated offline only (empty temp config dir): no live Otter account was used.
+
+## Follow-ups
+
+- Generate `--help`, the home hints and `skills/otter-axi/SKILL.md` from one `reference.ts`,
+  with a `docs:check` CI gate (issue #13, "Smaller").
+- `--version` fast path via `axi-sdk-js/fast-path`, after bumping `axi-sdk-js` (issue #13,
+  "Smaller").
