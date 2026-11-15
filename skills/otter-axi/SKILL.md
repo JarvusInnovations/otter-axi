@@ -51,7 +51,7 @@ Tokens live in `~/.config/otter-axi/config.json` (mode 0600) and are never print
    ```sh
    otter-axi fetch <id>                    # metadata header + preview
    otter-axi fetch <id> --full             # verbatim transcript to stdout (pipe it)
-   otter-axi fetch <id> --json-out         # parsed segments → auto-path under exports/
+   otter-axi fetch <id> --json-out         # parsed segments → auto-path in the OS temp dir
    otter-axi fetch <id> --json-out=t.json  # …or an explicit path (note the = form)
    otter-axi fetch <id> --csv-out          # CSV (--tsv-out / --text-out likewise)
    ```
@@ -61,6 +61,10 @@ Tokens live in `~/.config/otter-axi/config.json` (mode 0600) and are never print
    otter-axi's own lossless parser (so you don't re-derive it). Path is optional (bare →
    auto-path in the OS temp dir `<os-tmpdir>/otter-axi/`; `=path` for explicit); writing is additive —
    stdout keeps the preview and adds `wrote:`/`columns:` + a `jq` hint. One output mode per call.
+
+Flags are strict on every command: an unknown flag, a stray argument or an invalid value
+(`--after someday`, `--limit ten`) fails with exit 2 and lists what is valid. Nothing is
+silently ignored, so a result you get back was filtered the way you asked.
 
 ## Notes
 

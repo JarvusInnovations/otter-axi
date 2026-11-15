@@ -61,10 +61,7 @@ async function connect(token: string): Promise<{ client: Client; close: () => Pr
   const transport = new StreamableHTTPClientTransport(new URL(MCP_URL), {
     requestInit: { headers: { Authorization: `Bearer ${token}` } },
   });
-  const client = new Client(
-    { name: "otter-axi", version: readVersion() },
-    { capabilities: {} },
-  );
+  const client = new Client({ name: "otter-axi", version: readVersion() }, { capabilities: {} });
   await client.connect(transport);
   return { client, close: () => transport.close() };
 }
@@ -147,8 +144,7 @@ function payloadText(result: unknown): string {
 
 export async function getUser(): Promise<UserInfo> {
   const text = innerText(await callTool("get_user_info", {}));
-  const grab = (label: string) =>
-    text.match(new RegExp(`${label}:\\s*(.+)`))?.[1]?.trim();
+  const grab = (label: string) => text.match(new RegExp(`${label}:\\s*(.+)`))?.[1]?.trim();
   return { name: grab("Name"), email: grab("Email"), datetime: grab("Current DateTime") };
 }
 

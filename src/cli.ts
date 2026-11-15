@@ -1,4 +1,5 @@
-import { runAxiCli, type AxiCliOptions } from "axi-sdk-js";
+import { AxiError, exitCodeForError, runAxiCli, type AxiCliOptions } from "axi-sdk-js";
+import { encode } from "@toon-format/toon";
 import { DESCRIPTION, readVersion } from "./meta.js";
 import { homeCommand } from "./commands/home.js";
 import { authCommand, AUTH_HELP } from "./commands/auth.js";
@@ -29,10 +30,45 @@ const COMMAND_HELP: Record<string, string> = {
   fetch: FETCH_HELP,
 };
 
+/**
+ * Error codes that represent a malformed invocation rather than a failed operation. These
+ * must exit 2, but the SDK only maps its own `VALIDATION_ERROR` that way — so they are
+ * re-mapped here.
+ */
+const USAGE_CODES = new Set(["USAGE", "UNKNOWN_FLAG", "VALIDATION_ERROR"]);
+
+function renderFailure(message: string, code: string, suggestions: string[]): string {
+  const output: Record<string, unknown> = { error: message, code };
+  if (suggestions.length > 0) output.help = suggestions;
+  // Written verbatim by the SDK, so the trailing newline is ours.
+  return `${encode(output)}\n`;
+}
+
+/**
+ * Exported (rather than inlined into the `runAxiCli` call) so the USAGE-set→2 mapping and
+ * INTERNAL_ERROR wrapping are unit-testable without exercising the full CLI dispatch.
+ */
+export function formatError(error: unknown): { output: string; exitCode: number } {
+  if (error instanceof AxiError) {
+    return {
+      output: renderFailure(error.message, error.code, error.suggestions),
+      exitCode: USAGE_CODES.has(error.code) ? 2 : exitCodeForError(error),
+    };
+  }
+
+  // Never let a raw dependency error or stack trace reach stdout — an agent would try to
+  // read it as data.
+  const message = error instanceof Error ? error.message : String(error);
+  return {
+    output: renderFailure(`unexpected failure: ${message}`, "INTERNAL_ERROR", [
+      "Run `otter-axi doctor` to check credentials and connectivity",
+    ]),
+    exitCode: 1,
+  };
+}
+
 /** Build the CLI options. Overrides (e.g. `argv`, `stdout`) let tests drive dispatch. */
-export function cliOptions(
-  overrides: Partial<AxiCliOptions> = {},
-): AxiCliOptions {
+export function cliOptions(overrides: Partial<AxiCliOptions> = {}): AxiCliOptions {
   return {
     description: DESCRIPTION,
     version: readVersion(),
@@ -46,6 +82,7 @@ export function cliOptions(
       fetch: (args) => fetchCommand(args),
     },
     getCommandHelp: (command) => COMMAND_HELP[command],
+    formatError,
     ...overrides,
   };
 }

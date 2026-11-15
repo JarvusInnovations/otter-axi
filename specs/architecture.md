@@ -27,11 +27,11 @@ sanctioned, working surface for this account is the hosted MCP server.
 otter-axi/
   bin/otter-axi.ts          # shebang shim → main()
   src/
-    cli.ts                  # runAxiCli(cliOptions()); TOP_HELP, COMMAND_HELP
+    cli.ts                  # runAxiCli(cliOptions()); TOP_HELP, COMMAND_HELP, formatError
     meta.ts                 # DESCRIPTION, readVersion()
-    flags.ts                # parseArgs / strFlag / hasFlag (SDK does not parse flags)
+    flags.ts                # strict parser + every command's FlagSpec (behaviors/invocation.md)
     output.ts               # truncation, count labels, relative time
-    config.ts               # ~/.config/otter-axi/config.json (0600) read/write
+    config.ts               # ~/.config/otter-axi/config.json read/write (0600, re-set on every write)
     otter/
       oauth.ts              # OAuth provider: DCR + PKCE + loopback + refresh + storage
       client.ts             # MCP client: connect, callTool, error mapping
@@ -60,7 +60,7 @@ the Enterprise REST API, which is out of scope; `.env` may be removed.
 Plain objects from handlers → TOON at the SDK boundary. Borrow `metabase-axi`'s kit:
 `truncateCell` with a visible `…(truncated, N chars total)` marker, `countLabel` (`N of M`),
 relative-time helpers. Transcript bodies are large: `fetch` previews to stdout and writes
-the full transcript to a file (`--out`), per the metabase preview-to-stdout/full-to-file
+the full transcript to a file (the `*-out` flags), per the metabase preview-to-stdout/full-to-file
 pattern — never dump a giant transcript inline by default.
 
 ## Command surface
@@ -85,8 +85,12 @@ to find-and-pull (see [principles.md](principles.md)); no write or analysis comm
 Mirrors the sibling AXI tools (the Jarvus develop→main Release-PR automation):
 
 - **CI** (`.github/workflows/ci.yml`) — on push/PR to `main` and `develop`: checkout, pin
-  node `22.22.3` + bun `1.3.14`, `bun install --frozen-lockfile`, `bun run build`,
-  `bun run test`. Must be green on every Release PR.
+  node `22.22.3` + bun `1.3.14`, `bun install --frozen-lockfile`, lint, format check, type check,
+  `bun run build`, `bun run test`, then a **no-credentials smoke test** of the built binary:
+  a real command (`search`) with an empty config dir must print a structured `code: AUTH`
+  error and exit 1, an unknown flag must exit 2 with `code: UNKNOWN_FLAG`, and no stack trace
+  may reach the output. (`--version`/`--help` alone never reach dispatch.) Must be green on
+  every Release PR.
 - **Release flow** — `main` is the released branch; `develop` is the integration branch.
   Pushing `develop` triggers `release-prepare` (opens/updates the `Release: vX.Y.Z` PR into
   `main` with a bot changelog); `release-validate` gates the PR; **merging the PR publishes**

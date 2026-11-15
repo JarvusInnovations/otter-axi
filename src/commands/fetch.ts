@@ -3,43 +3,39 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { Buffer } from "node:buffer";
 import { AxiError } from "axi-sdk-js";
-import { hasFlag, parseArgs, strFlag } from "../flags.js";
+import { FETCH_FLAGS, FETCH_USAGE, bool, parseFlags, requirePositional, str } from "../flags.js";
 import { fetchTranscript } from "../otter/client.js";
 import { truncateCell } from "../output.js";
-import {
-  parseTranscript,
-  segmentsToCsv,
-  segmentsToTsv,
-} from "../transcript.js";
+import { parseTranscript, segmentsToCsv, segmentsToTsv } from "../transcript.js";
 import type { StructuredOutput } from "../output.js";
 
-export const FETCH_HELP = `usage: otter-axi fetch <id|url> [output-mode]
+export const FETCH_HELP = `usage: ${FETCH_USAGE}
 args:
   <id|url>           conversation slug or an https://otter.ai/u/<id> URL
 output modes (at most one; default is a preview):
   --full             print the entire verbatim transcript to stdout (for piping)
-  --text-out[=path]  write the verbatim transcript text to a file (alias: --out)
+  --text-out[=path]  write the verbatim transcript text to a file
   --json-out[=path]  write parsed segments [{start,speaker,text}] as JSON
   --csv-out[=path]   write parsed segments as CSV (start,speaker,text)
   --tsv-out[=path]   write parsed segments as TSV
 notes:
-  Path is optional: bare flag auto-writes ~/.config/otter-axi/exports/<ts>-<id>.<ext>;
-  use --json-out=path for an explicit location. Writing a file is additive — stdout keeps
-  the preview and adds wrote/columns/jq help. otter-axi owns the lossless transcript parse.`;
+  Path is optional: a bare flag writes <os-temp-dir>/otter-axi/<ts>-<id>.<ext> (owner-only);
+  use --json-out=path for an explicit location (the = is required, so a bare flag never
+  swallows the id). Writing a file is additive — stdout keeps the preview and adds
+  wrote/columns/jq help. otter-axi owns the lossless transcript parse.`;
 
 const PREVIEW_CHARS = 1200;
 
 type OutFormat = "text" | "json" | "csv" | "tsv";
 const EXT: Record<OutFormat, string> = { text: "txt", json: "json", csv: "csv", tsv: "tsv" };
 
-// Flags that select a file-export format. NOT in `valued`, so a bare flag is boolean
-// (→ auto-path) and an explicit path uses `--json-out=path` (avoids eating the <id> positional).
+// Flags that select a file-export format. Declared `optional` in FETCH_FLAGS: a bare flag
+// is an auto path, and an explicit path rides on `=` so it can't eat the <id> positional.
 const OUT_FLAGS: Array<{ flag: string; format: OutFormat }> = [
-  { flag: "json-out", format: "json" },
-  { flag: "csv-out", format: "csv" },
-  { flag: "tsv-out", format: "tsv" },
-  { flag: "text-out", format: "text" },
-  { flag: "out", format: "text" }, // back-compat alias
+  { flag: "--json-out", format: "json" },
+  { flag: "--csv-out", format: "csv" },
+  { flag: "--tsv-out", format: "tsv" },
+  { flag: "--text-out", format: "text" },
 ];
 
 /** Normalize a conversation slug or otter.ai URL to a bare id. */
@@ -88,23 +84,24 @@ function jqHelp(format: OutFormat, path: string): string | undefined {
 }
 
 export async function fetchCommand(args: string[]): Promise<StructuredOutput | string> {
-  const parsed = parseArgs(args);
-  const raw = parsed.positionals[0];
-  if (!raw) {
-    throw new AxiError("Missing conversation id or URL", "VALIDATION_ERROR", [
-      "Run `otter-axi fetch <id|url>`",
-      "Run `otter-axi search …` to find an id",
-    ]);
-  }
+  const parsed = parseFlags("fetch", args, FETCH_FLAGS);
+  const raw = requirePositional(
+    parsed,
+    0,
+    "A conversation id or URL",
+    `Run \`${FETCH_USAGE}\` — \`otter-axi search\` lists ids`,
+  );
   const id = normalizeConversationId(raw);
 
-  const present = OUT_FLAGS.filter((m) => hasFlag(parsed, m.flag));
-  const full = hasFlag(parsed, "full");
-  const distinctFormats = new Set(present.map((m) => m.format));
-  if (distinctFormats.size + (full ? 1 : 0) > 1) {
-    throw new AxiError("Choose a single output mode", "VALIDATION_ERROR", [
-      "Use one of --full | --text-out | --json-out | --csv-out | --tsv-out",
-    ]);
+  const present = OUT_FLAGS.filter((m) => bool(parsed, m.flag));
+  const full = bool(parsed, "--full");
+  const modes = [...(full ? ["--full"] : []), ...present.map((m) => m.flag)];
+  if (modes.length > 1) {
+    throw new AxiError(
+      `Choose a single output mode, got ${modes.join(" and ")}`,
+      "VALIDATION_ERROR",
+      ["Use one of --full | --text-out | --json-out | --csv-out | --tsv-out"],
+    );
   }
 
   let t;
@@ -130,9 +127,7 @@ export async function fetchCommand(args: string[]): Promise<StructuredOutput | s
     start: (t.metadata?.start_time ?? "").slice(0, 10),
     dur: t.metadata?.duration ?? "—",
     summary: t.metadata?.short_summary ?? "",
-    action_items: Array.isArray(t.metadata?.action_items)
-      ? t.metadata.action_items.length
-      : 0,
+    action_items: Array.isArray(t.metadata?.action_items) ? t.metadata.action_items.length : 0,
     chars: text.length,
     preview: truncateCell(text, PREVIEW_CHARS),
   };
@@ -149,7 +144,7 @@ export async function fetchCommand(args: string[]): Promise<StructuredOutput | s
 
   // File export — additive: keep the preview, write the file, add wrote/columns/jq help.
   const format = present[0].format;
-  const explicit = present.map((m) => strFlag(parsed, m.flag)).find((v) => v !== undefined);
+  const explicit = str(parsed, present[0].flag);
   const path = resolveExportPath(explicit, format, id);
 
   let body: string;
@@ -174,5 +169,11 @@ export async function fetchCommand(args: string[]): Promise<StructuredOutput | s
   const jq = jqHelp(format, path);
   if (jq) help.push(jq);
 
-  return { ...base, wrote: path, bytes: Buffer.byteLength(body), ...extra, ...(help.length ? { help } : {}) };
+  return {
+    ...base,
+    wrote: path,
+    bytes: Buffer.byteLength(body),
+    ...extra,
+    ...(help.length ? { help } : {}),
+  };
 }

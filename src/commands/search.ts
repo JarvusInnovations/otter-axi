@@ -1,6 +1,7 @@
 import { readConfig } from "../config.js";
 import { normalizeDate } from "../dates.js";
-import { hasFlag, numFlag, parseArgs, strFlag } from "../flags.js";
+import { AxiError } from "axi-sdk-js";
+import { SEARCH_FLAGS, bool, nonEmptyStr, parseFlags, positiveInt, str } from "../flags.js";
 import { search as searchMeetings } from "../otter/client.js";
 import { countLabel, truncateCell } from "../output.js";
 import type { StructuredOutput } from "../output.js";
@@ -8,7 +9,8 @@ import type { StructuredOutput } from "../output.js";
 export const SEARCH_HELP = `usage: otter-axi search [query...] [flags]
 flags:
   -q, --query <str>        keyword/semantic query (or pass positionally; may be empty)
-  --after <date>           created on/after — ISO (2026-05-01) or relative (7d, 30d)
+  --after <date>           created on/after — a date (2026-05-01) or a span back from
+                           today (7d, 2w, 3m, 1y)
   --before <date>          created on/before — same formats
   --title-contains <str>   space-separated keywords matched against the title
   --in-transcript <str>    comma-separated keywords searched within transcripts
@@ -21,47 +23,45 @@ flags:
 notes:
   empty query + a date range is browse mode — list meetings in a window`;
 
-const VALUED = [
-  "query",
-  "q",
-  "after",
-  "before",
-  "title-contains",
-  "in-transcript",
-  "attended-by",
-  "channel",
-  "folder",
-  "limit",
-];
-
 export async function searchCommand(args: string[]): Promise<StructuredOutput> {
-  const parsed = parseArgs(args, { valued: VALUED });
+  const parsed = parseFlags("search", args, SEARCH_FLAGS);
 
-  const query = parsed.positionals.join(" ") || strFlag(parsed, "query") || strFlag(parsed, "q") || "";
+  // One query source per call: picking a winner would silently drop the other.
+  const sources = [
+    ...(parsed.positional.length > 0 ? ["a positional query"] : []),
+    ...(str(parsed, "--query") !== undefined ? ["--query"] : []),
+    ...(str(parsed, "-q") !== undefined ? ["-q"] : []),
+  ];
+  if (sources.length > 1) {
+    throw new AxiError(`Give the query once, got ${sources.join(" and ")}`, "VALIDATION_ERROR", [
+      'Run `otter-axi search "<query>"` with the whole query in one place',
+    ]);
+  }
+  const query = parsed.positional.join(" ") || str(parsed, "--query") || str(parsed, "-q") || "";
   const params: Record<string, unknown> = { query };
 
-  const after = strFlag(parsed, "after");
-  if (after) params.created_after = normalizeDate(after);
-  const before = strFlag(parsed, "before");
-  if (before) params.created_before = normalizeDate(before);
-  const titleContains = strFlag(parsed, "title-contains");
+  const after = str(parsed, "--after");
+  if (after !== undefined) params.created_after = normalizeDate(after, new Date(), "--after");
+  const before = str(parsed, "--before");
+  if (before !== undefined) params.created_before = normalizeDate(before, new Date(), "--before");
+  const titleContains = nonEmptyStr(parsed, "--title-contains");
   if (titleContains) params.title_contains = titleContains;
-  const inTranscript = strFlag(parsed, "in-transcript");
+  const inTranscript = nonEmptyStr(parsed, "--in-transcript");
   if (inTranscript) params.keywords_in_transcript = inTranscript;
-  const attendedBy = strFlag(parsed, "attended-by");
+  const attendedBy = nonEmptyStr(parsed, "--attended-by");
   if (attendedBy) params.attended_by = attendedBy;
-  const channel = strFlag(parsed, "channel");
+  const channel = nonEmptyStr(parsed, "--channel");
   if (channel) params.channel_name = channel;
-  const folder = strFlag(parsed, "folder");
+  const folder = nonEmptyStr(parsed, "--folder");
   if (folder) params.folder_name = folder;
-  if (hasFlag(parsed, "mine")) params.include_shared_meetings = false;
+  if (bool(parsed, "--mine")) params.include_shared_meetings = false;
+
+  const limit = positiveInt(parsed, "--limit", 20);
+  const full = bool(parsed, "--full");
 
   // username (from cache) lets the upstream compute participation_status — not a flag.
   const cachedName = readConfig().user?.name;
   if (cachedName) params.username = cachedName;
-
-  const limit = numFlag(parsed, "limit") ?? 20;
-  const full = hasFlag(parsed, "full");
 
   const meetings = await searchMeetings(params);
 

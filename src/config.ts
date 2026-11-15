@@ -1,10 +1,4 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -82,13 +76,21 @@ export function readConfig(): Config {
   }
 }
 
+/**
+ * Write a file that holds secrets owner-only. `mode` on `writeFileSync` applies only when the
+ * file is created, so an existing file that was loosened (or restored from a backup) would
+ * keep its wider mode — chmod after every write.
+ */
+function writeSecretFile(path: string, body: string): void {
+  writeFileSync(path, body, { mode: 0o600 });
+  chmodSync(path, 0o600);
+}
+
 export function writeConfig(cfg: Config): void {
   const dir = configDir();
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
   // Restrictive perms: the file holds OAuth access/refresh tokens.
-  writeFileSync(configPath(), `${JSON.stringify(cfg, null, 2)}\n`, {
-    mode: 0o600,
-  });
+  writeSecretFile(configPath(), `${JSON.stringify(cfg, null, 2)}\n`);
 }
 
 /** Remove the stored token set (used by `auth logout`). Idempotent. */
@@ -141,9 +143,7 @@ export function readPending(): PendingAuth | undefined {
 export function writePending(pending: PendingAuth): void {
   const dir = configDir();
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
-  writeFileSync(pendingPath(), `${JSON.stringify(pending, null, 2)}\n`, {
-    mode: 0o600,
-  });
+  writeSecretFile(pendingPath(), `${JSON.stringify(pending, null, 2)}\n`);
 }
 
 export function clearPending(): void {

@@ -22,6 +22,10 @@
   "scripts": {
     "build": "tsc && chmod +x dist/bin/otter-axi.js",
     "dev": "bun bin/otter-axi.ts",
+    "lint": "oxlint src bin test",
+    "format": "oxfmt src bin test",
+    "format:check": "oxfmt --check src bin test",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"
@@ -33,6 +37,8 @@
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
+    "oxfmt": "^0.56.0",
+    "oxlint": "^1.71.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"
   },

@@ -24,3 +24,18 @@ describe("normalizeDate", () => {
     expect(() => normalizeDate("last tuesday", now)).toThrowError(/Unrecognized date/);
   });
 });
+
+describe("normalizeDate rejects", () => {
+  it("a well-shaped date that is not on the calendar", () => {
+    for (const bad of ["2026-02-30", "2026-13-01", "2026/00/10", "2026-04-31"]) {
+      expect(() => normalizeDate(bad, now)).toThrowError(/Unrecognized date/);
+    }
+    expect(normalizeDate("2024-02-29", now)).toBe("2024/02/29");
+  });
+
+  it("names the flag the value came from", () => {
+    expect(() => normalizeDate("soon", now, "--before")).toThrowError(
+      "Unrecognized date for --before: soon",
+    );
+  });
+});
