@@ -57,7 +57,11 @@ transcript into `{start, speaker, text}` rows — otter-axi owns one tested, los
 agents don't re-derive it. Per the [AXI side-channel-file convention](https://github.com/kunchenguid/axi/issues/32),
 the path is optional (bare → `<os-tmpdir>/otter-axi/<ts>-<id>.<ext>` — transient scratch the OS
 cleans up), and writing a file is additive: stdout keeps the preview and adds `wrote:`/`columns:`
-and a `jq` hint.
+and a `jq` hint. An explicit path needs the `=` (`--json-out=t.json`), so a bare export flag never
+swallows the id.
+
+Flags are strict: an unknown flag, a stray argument or an invalid value fails with exit 2 and
+names what is valid, instead of being ignored. `fetch --out` is retired — use `--text-out`.
 
 ## Commands
 

@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { AxiError } from "axi-sdk-js";
-import { parseArgs, hasFlag } from "../flags.js";
+import { AUTH_FLAGS, bool, parseSubcommand, type Parsed } from "../flags.js";
 import {
   clearPending,
   clearTokens,
@@ -25,8 +25,6 @@ notes:
   Default \`login\` opens your browser and blocks (~5 min) until you approve.
   Agents: run \`auth login --no-wait\` to get the URL, relay it, then \`auth login
   --wait\` in a separate turn. Authorization codes are short-lived — approve promptly.`;
-
-const SUBCOMMANDS = new Set(["login", "status", "logout"]);
 
 function openBrowser(url: string): void {
   const cmd =
@@ -66,10 +64,14 @@ async function bindWaitComplete(port: number): Promise<StructuredOutput> {
   }
 }
 
-async function login(args: string[]): Promise<StructuredOutput> {
-  const parsed = parseArgs(args);
-  const noWait = hasFlag(parsed, "no-wait");
-  const waitOnly = hasFlag(parsed, "wait");
+async function login(parsed: Parsed): Promise<StructuredOutput> {
+  const noWait = bool(parsed, "--no-wait");
+  const waitOnly = bool(parsed, "--wait");
+  if (noWait && waitOnly) {
+    throw new AxiError("--no-wait and --wait are separate steps", "VALIDATION_ERROR", [
+      "Run `otter-axi auth login --no-wait` first, then `otter-axi auth login --wait`",
+    ]);
+  }
 
   if (waitOnly) {
     const pending = readPending();
@@ -100,9 +102,8 @@ async function login(args: string[]): Promise<StructuredOutput> {
   return await bindWaitComplete(port);
 }
 
-async function status(args: string[]): Promise<StructuredOutput> {
-  const parsed = parseArgs(args);
-  const offline = hasFlag(parsed, "offline");
+async function status(parsed: Parsed): Promise<StructuredOutput> {
+  const offline = bool(parsed, "--offline");
   const cfg = readConfig();
 
   if (!isLoggedIn(cfg)) {
@@ -146,16 +147,8 @@ async function logout(): Promise<StructuredOutput> {
 }
 
 export async function authCommand(args: string[]): Promise<StructuredOutput> {
-  const sub = args[0];
-  if (sub === undefined || !SUBCOMMANDS.has(sub)) {
-    throw new AxiError(
-      sub ? `Unknown auth subcommand: ${sub}` : "Missing auth subcommand",
-      "VALIDATION_ERROR",
-      ["Run `otter-axi auth login`", "Run `otter-axi auth --help`"],
-    );
-  }
-  const rest = args.slice(1);
-  if (sub === "login") return await login(rest);
-  if (sub === "status") return await status(rest);
+  const { sub, parsed } = parseSubcommand("auth", args, AUTH_FLAGS);
+  if (sub === "login") return await login(parsed);
+  if (sub === "status") return await status(parsed);
   return await logout();
 }

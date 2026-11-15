@@ -1,4 +1,5 @@
-import { AxiError, installSessionStartHooks } from "axi-sdk-js";
+import { installSessionStartHooks } from "axi-sdk-js";
+import { SETUP_FLAGS, parseSubcommand } from "../flags.js";
 import type { StructuredOutput } from "../output.js";
 
 export const SETUP_HELP = `usage: otter-axi setup hooks
@@ -9,11 +10,8 @@ export async function setupCommand(
   args: string[],
   opts: { homeDir?: string; shouldInstall?: (execPath: string) => boolean } = {},
 ): Promise<StructuredOutput> {
-  if (args[0] !== "hooks") {
-    throw new AxiError("Unknown setup subcommand", "VALIDATION_ERROR", [
-      "Run `otter-axi setup hooks`",
-    ]);
-  }
+  // `hooks` is the only subcommand; parsing still rejects stray flags and arguments.
+  parseSubcommand("setup", args, SETUP_FLAGS);
   installSessionStartHooks({
     marker: "otter-axi",
     binaryNames: ["otter-axi"],

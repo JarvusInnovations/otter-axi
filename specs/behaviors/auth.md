@@ -44,6 +44,14 @@ profile. Secrets are never printed by any command.
   (the metabase-axi pattern). If refresh fails (revoked/expired refresh token), raise an
   `AxiError("AUTH", …)` whose `help[]` is exactly `Run otter-axi auth login`.
 
+## Invocation
+
+`auth` requires one of `login`, `status`, `logout`; a missing or unknown subcommand is a
+`VALIDATION_ERROR` listing them. Each takes only its own flags (`login`: `--no-wait`, `--wait`;
+`status`: `--offline`; `logout`: none) and no positionals — see
+[invocation.md](invocation.md). `--no-wait` with `--wait` is a `VALIDATION_ERROR`: they are
+two separate steps.
+
 ## `auth status` / `auth logout`
 
 - **status:** report whether logged in, the account email (from cache), and token validity

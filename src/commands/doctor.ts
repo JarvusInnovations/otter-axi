@@ -1,5 +1,6 @@
 import { AxiError } from "axi-sdk-js";
 import { configPath, isLoggedIn, readConfig } from "../config.js";
+import { DOCTOR_FLAGS, parseFlags } from "../flags.js";
 import { getUser } from "../otter/client.js";
 import type { StructuredOutput } from "../output.js";
 
@@ -15,7 +16,8 @@ interface Check {
   detail: string;
 }
 
-export async function doctorCommand(_args: string[]): Promise<StructuredOutput> {
+export async function doctorCommand(args: string[]): Promise<StructuredOutput> {
+  parseFlags("doctor", args, DOCTOR_FLAGS);
   const cfg = readConfig();
   const checks: Check[] = [{ name: "config", status: "ok", detail: configPath() }];
 
