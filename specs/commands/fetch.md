@@ -10,18 +10,20 @@ otter-axi fetch <id|url> [flags]
 
 `<id|url>` (required) is a conversation slug (`aBcDeFgHiJkLmNoPqRsTuVwXyZ0`) **or** a full
 `https://otter.ai/u/<id>[?…]` URL. A URL is normalized to its `<id>` before calling the tool
-(query string and fragments stripped). Missing argument → `AxiError("VALIDATION_ERROR", …)`,
-exit 2; no prompt.
+(query string and fragments stripped). A missing id, or a second positional, is a `USAGE` error
+(exit 2); no prompt. Flags are parsed strictly — see
+[behaviors/invocation.md](../behaviors/invocation.md).
 
 ## Flags
 
-At most **one** output mode may be given; combining two is a `VALIDATION_ERROR` (exit 2).
+At most **one** output mode may be given; combining two is a `VALIDATION_ERROR` (exit 2) that
+names the flags given.
 Default (no flag) is the preview.
 
 | Flag | Effect |
 |---|---|
 | `--full` | Print the entire **verbatim** transcript to stdout (raw, for piping). |
-| `--text-out[=path]` (alias `--out`) | Write the verbatim transcript text to a file. |
+| `--text-out[=path]` | Write the verbatim transcript text to a file. |
 | `--json-out[=path]` | Write parsed **segments** as a JSON array to a file. |
 | `--csv-out[=path]` | Write parsed segments as CSV (`start,speaker,text`, RFC-4180 quoted). |
 | `--tsv-out[=path]` | Write parsed segments as TSV (tab-separated; tabs/newlines in text escaped). |
@@ -32,9 +34,13 @@ The `*-out` flags follow the AXI side-channel-file convention
 - **Path is optional.** A bare flag auto-writes
   `<os-tmpdir>/otter-axi/<ISO-timestamp>-<id>.<ext>` — an auto-generated export is **ephemeral
   scratch**, so it goes in the OS temp dir (`/tmp` on Linux, `$TMPDIR` on macOS, which the OS
-  prunes), never under `~/.config` (durable state nothing prunes). `--json-out=path` (the `=`
-  form, so it doesn't swallow the `<id>` positional) writes an explicit location (`~/`, relative,
-  and absolute paths accepted), for when the file should persist.
+  prunes), never under `~/.config` (durable state nothing prunes). `--json-out=path` writes an
+  explicit location (`~/`, relative, and absolute paths accepted), for when the file should
+  persist.
+- **The path rides on `=`, and only on `=`.** A bare export flag never consumes the next token,
+  so `fetch --json-out <id>` and `fetch <id> --json-out` both mean "auto path". A
+  space-separated path (`fetch <id> --json-out t.json`) is a `USAGE` error naming
+  `--json-out=t.json`; `--json-out=` with nothing after it is a `USAGE` error too.
 - **Auto-generated export files are written `0600`** (owner-only) — transcripts are sensitive and
   the OS temp dir is world-readable on some platforms. An explicit `--<fmt>-out=path` is the
   caller's responsibility and uses the default umask.
@@ -42,8 +48,10 @@ The `*-out` flags follow the AXI side-channel-file convention
   transcript preview and *adds* `wrote: <path>`, `bytes`, and — for the segment formats —
   `segments`, `columns: start, speaker, text`, plus a `help[]` `jq` example pointed at the file
   so an agent can query it without reading it first. `--text-out` adds only `wrote`/`bytes`.
-- One format per invocation; no generic extension-sniffing `--out` (the `--out` alias maps to
-  `--text-out` explicitly).
+- One format per invocation; no generic extension-sniffing `--out`. **`--out` is retired**: it
+  was an alias for `--text-out` and now fails as `UNKNOWN_FLAG` with a hint naming `--text-out`
+  (carrying the path when given as `--out=path`). `--help` describes exactly this contract,
+  including the temp-dir auto path.
 
 ## Transcript parsing
 
@@ -82,6 +90,7 @@ and `metadata` is `{ action_items, duration, short_summary, start_time }`.
   `help[]` `jq` line pointed at the file. The body is never dumped inline. `--text-out` writes
   byte-exact verbatim `text`; the segment formats write parsed segments.
 - `--full` prints the whole verbatim `text` to stdout (byte-exact, for piping) — no preview.
+  This is deliberate: the output is the raw transcript string, not TOON.
 - **Not found / invalid id:** definitive `AxiError` naming the id, with a `help[]` pointing
   back to `search`.
 

@@ -14,7 +14,8 @@ specs/
 ├── api/
 │   └── mcp-server.md   # the upstream contract: transport, OAuth, tools
 ├── behaviors/
-│   └── auth.md         # OAuth login, token storage, refresh, logout
+│   ├── auth.md         # OAuth login, token storage, refresh, logout
+│   └── invocation.md   # strict flag parsing, error codes, exit codes
 └── commands/           # one file per CLI command (the CLI analogue of "screens")
     ├── search.md
     └── fetch.md
