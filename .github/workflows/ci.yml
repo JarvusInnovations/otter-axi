@@ -40,3 +40,44 @@ jobs:
 
       - name: Test
         run: bun run test
+
+      - name: Smoke test the built binary
+        # `--version` alone is not enough — it never reaches command dispatch. Running a
+        # real command with no credentials exercises dispatch, flag parsing and the
+        # error-formatting path, and must produce a structured error rather than a crash
+        # or a raw stack trace.
+        run: |
+          node dist/bin/otter-axi.js --version
+          node dist/bin/otter-axi.js --help > /dev/null
+
+          export OTTER_AXI_CONFIG_DIR="$RUNNER_TEMP/otter-axi-smoke"
+
+          check() {
+            want_exit="$1"; want_code="$2"; shift 2
+            set +e
+            out=$(node dist/bin/otter-axi.js "$@" 2>&1)
+            code=$?
+            set -e
+            echo "$ otter-axi $*"
+            echo "$out"
+            if [ "$code" -ne "$want_exit" ]; then
+              echo "::error::expected exit $want_exit, got $code"
+              exit 1
+            fi
+            if ! echo "$out" | grep -q "code: $want_code"; then
+              echo "::error::expected a structured $want_code error"
+              exit 1
+            fi
+            # A leaked stack trace means an unhandled failure reached stdout, where an
+            # agent would try to read it as data.
+            if echo "$out" | grep -qE '^\s+at |node:internal'; then
+              echo "::error::a raw stack trace leaked to stdout"
+              exit 1
+            fi
+          }
+
+          check 1 AUTH search roadmap --after 7d
+          check 2 UNKNOWN_FLAG search --bogus
+          check 2 USAGE fetch
+
+          echo "smoke test passed"
